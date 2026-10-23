@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Criador de Personagens Shadowdark</title>
+  <meta name="description" content="Crie personagens de Shadowdark RPG passo a passo, com explicação de cada escolha e cálculos automáticos.">
+  <meta name="theme-color" content="#1c1b19">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top no-print">
+    <a class="brand" href="#/">Criador Shadowdark</a>
+    <nav class="top-nav"><a href="#/">Início</a><a href="#/mestre">Mestre</a></nav>
+  </header>
+
+  <main id="app" class="container"><p>Carregando…</p></main>
+
+  <div id="sheet" class="bottom-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-panel">
+      <div class="sheet-top"><h2 class="sheet-title" id="sheet-title"></h2><button type="button" class="sheet-close" aria-label="Fechar">×</button></div>
+      <div class="sheet-body"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" hidden role="status"></div>
+
+  <footer class="foot no-print">
+    <p>Ferramenta de fã, não oficial. Shadowdark RPG é da The Arcane Library; os textos aqui são resumos com páginas de referência. Tenha seu livro em mãos para as regras completas.</p>
+  </footer>
+  <noscript>Este aplicativo precisa de JavaScript ativado.</noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
