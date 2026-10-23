@@ -1,0 +1,14 @@
+{
+  "name": "Criador de Personagens Shadowdark",
+  "short_name": "Shadowdark",
+  "description": "Crie personagens de Shadowdark RPG passo a passo.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1c1b19",
+  "theme_color": "#1c1b19",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
