@@ -5,6 +5,7 @@ import {
 } from './rules.js';
 import { alignName } from './wizard.js';
 import { esc, help, helpText } from './ui.js';
+import { icon } from './icons.js';
 
 export function backgroundOf(rules, c) {
   const bg = c.background;
@@ -106,7 +107,7 @@ export function renderSheet(rules, c, { compact = false, interactive = false, ad
   const patron = rules.patrons.find((p) => p.id === c.patron);
   const cls = getClass(rules, c);
 
-  const stats = STATS.map((k) => `<div class="stat"><span class="stat-name">${k}</span><span class="stat-mod">${fmtMod(s.mods[k])}</span><span class="stat-val">${s.stats[k]}</span></div>`).join('');
+  const stats = STATS.map((k) => `<div class="stat"><span class="stat-name">${icon(k, 'stat-icon')} ${k}</span><span class="stat-mod">${fmtMod(s.mods[k])}</span><span class="stat-val">${s.stats[k]}</span></div>`).join('');
 
   const attacks = s.attacks.length
     ? `<table class="attacks"><thead><tr><th>Arma</th><th>Ataque</th><th>Dano</th><th>Alcance</th></tr></thead><tbody>

@@ -6,7 +6,7 @@ import {
   MAX_LEVEL, fmtMod,
 } from './rules.js';
 import * as R from './random.js';
-import { STEPS, visibleSteps, renderTalentSlot, renderSpellPicker } from './wizard.js';
+import { STEPS, visibleSteps, renderTalentSlot, renderSpellPicker, bookToggle } from './wizard.js';
 import { renderSheet, summaryLine } from './sheet.js';
 import * as store from './storage.js';
 import { esc, help, openHelp, closeSheet, toast, getAt, setAt, diceInput } from './ui.js';
@@ -174,7 +174,7 @@ function viewGM() {
           <label class="field">Nível <select data-gm="level">${Array.from({ length: MAX_LEVEL + 1 }, (_, i) => `<option value="${i}" ${gm.level === i ? 'selected' : ''}>Nível ${i}</option>`).join('')}</select></label>
         </div>
         <label class="field">Nome do grupo (opcional) <input type="text" data-gm="group" value="${esc(gm.group)}" placeholder="Ex.: Mesa de sexta, Provação da Ana"></label>
-        <fieldset><legend>Livros</legend>${BOOKS.map((b) => `<label class="toggle"><input type="checkbox" data-act="gmBook" value="${b.id}" ${gm.books.includes(b.id) ? 'checked' : ''} ${b.required ? 'disabled' : ''}> ${esc(b.name)}</label>`).join('')}</fieldset>
+        <fieldset><legend>Livros</legend><div class="books">${BOOKS.map((b) => bookToggle(b, gm.books.includes(b.id), 'gmBook')).join('')}</div></fieldset>
         ${gm.level >= 1 ? `<details><summary>Limitar classes (${gm.classPool.length ? gm.classPool.length : 'todas'})</summary><div class="checks">${classes}</div></details>` : ''}
         <button type="button" class="btn primary" data-act="gmGenerate">🎲 Gerar personagens</button>
       </div>

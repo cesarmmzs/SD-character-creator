@@ -7,6 +7,7 @@ import {
   computeSheet, weaponAllowed, armorAllowed, itemOf, hpSteps, hpRollsNeeded, buyQty, rangeName,
 } from './rules.js';
 import * as R from './random.js';
+import { icon } from './icons.js';
 import { esc, help, helpText, select, diceInput, getAt } from './ui.js';
 
 const ALIGN_DESC = {
@@ -17,11 +18,17 @@ const ALIGN_DESC = {
 const ALIGN_NAME = Object.fromEntries(ALIGNMENTS.map((a) => [a.id, a.name]));
 export const alignName = (id) => ALIGN_NAME[id] || '';
 
-function card({ act = 'set', path, value, selected, title, body, badge = '', extra = '' }) {
+function card({ act = 'set', path, value, selected, title, body, badge = '', extra = '', iconId = null }) {
   return `<button type="button" class="card${selected ? ' selected' : ''}" data-act="${act}" data-path="${esc(path)}" data-value="${esc(value)}" aria-pressed="${selected ? 'true' : 'false'}" ${extra}>
-    <span class="card-title">${esc(title)}${badge ? ` <span class="badge">${esc(badge)}</span>` : ''}</span>
+    <span class="card-title">${iconId ? icon(iconId, 'card-icon') : ''}<span>${esc(title)}${badge ? ` <span class="badge">${esc(badge)}</span>` : ''}</span></span>
     ${body}
   </button>`;
+}
+
+// Opção de livro com a capa ao fundo (primeira etapa e modo mestre).
+export function bookToggle(b, checked, act) {
+  return `<label class="book${checked ? ' on' : ''}"><span class="book-img" style="background-image:url('${esc(b.cover)}')"></span>
+    <span class="book-label"><input type="checkbox" data-act="${act}" value="${b.id}" ${checked ? 'checked' : ''} ${b.required ? 'disabled' : ''}> ${esc(b.name)}</span></label>`;
 }
 
 const bookBadge = (item) => (item.book && item.book !== 'base' ? BOOKS.find((b) => b.id === item.book).short : '');
@@ -175,8 +182,8 @@ export const STEPS = [
           ${card({ path: 'level', value: 1, selected: c.level === 1, title: 'Nível 1', body: '<span>Aventureiro pronto, com classe, talentos e mais vida.</span>' })}
         </div>`}
         <h3>Livros da sua mesa ${help('livros')}</h3>
-        <div class="toggles">
-          ${BOOKS.map((b) => `<label class="toggle"><input type="checkbox" data-act="toggleBook" value="${b.id}" ${c.books.includes(b.id) ? 'checked' : ''} ${b.required ? 'disabled' : ''}> ${esc(b.name)}</label>`).join('')}
+        <div class="books">
+          ${BOOKS.map((b) => bookToggle(b, c.books.includes(b.id), 'toggleBook')).join('')}
         </div>
         <div class="callout">
           <p><strong>Com pressa?</strong> Gere um personagem inteiro de uma vez e ajuste depois, se quiser.</p>
@@ -192,7 +199,7 @@ export const STEPS = [
     render(c) {
       const rows = STATS.map((s) => {
         const v = c.stats?.[s];
-        return `<tr><th>${esc(STAT_NAMES[s])} ${help(s)}</th>
+        return `<tr><th><span class="stat-label">${icon(s, 'stat-icon')} ${esc(STAT_NAMES[s])}</span> ${help(s)}</th>
           <td><input type="number" inputmode="numeric" min="3" max="18" data-bind="stats.${s}" data-type="num" value="${v ?? ''}" aria-label="${esc(STAT_NAMES[s])}"></td>
           <td class="mod">${v ? fmtMod(modifier(v)) : '–'}</td></tr>`;
       }).join('');
@@ -217,7 +224,7 @@ export const STEPS = [
       // Depois do nível 1 a classe fica fixa: trocar desfaria talentos, magias e PV de todos os níveis.
       const locked = c.level >= 2;
       const cards = rules.classes.filter((k) => !locked || k.id === c.classId).map((k) => card({
-        path: 'classId', value: k.id, selected: c.classId === k.id, title: k.name, badge: bookBadge(k),
+        path: 'classId', value: k.id, selected: c.classId === k.id, title: k.name, badge: bookBadge(k), iconId: k.id,
         body: `<span>${esc(k.desc)}</span><span class="facts">Vida: d${k.hitDie} · Armas: ${esc(k.weaponsText)} · Armaduras: ${esc(k.armorText)}</span>`,
       })).join('');
       let choices = '';
@@ -249,7 +256,7 @@ export const STEPS = [
     render(c, rules) {
       const anc = getAncestry(rules, c);
       const cards = rules.ancestries.map((a) => card({
-        path: 'ancestry', value: a.id, selected: c.ancestry === a.id, title: a.name,
+        path: 'ancestry', value: a.id, selected: c.ancestry === a.id, title: a.name, iconId: a.id,
         body: `<span>${esc(a.desc)}</span><span class="facts">Idiomas: ${esc(a.languages.join(', '))}${a.languageChoices ? ' + 1 à escolha' : ''}</span><span class="facts"><strong>${esc(a.feature.name)}:</strong> ${esc(a.feature.desc)}</span>`,
       })).join('');
       const choice = anc?.choice ? `<div class="panel"><label class="field">${esc(anc.choice.label)} ${select(`ancestryChoice.${anc.choice.id}`, anc.choice.options, c.ancestryChoice?.[anc.choice.id])}</label></div>` : '';
@@ -295,7 +302,7 @@ export const STEPS = [
     random: (rules, c) => R.randomAlignment(c),
     render(c) {
       return `${stepHeader('Alinhamento', 'alinhamento', 'De que lado você está?')}${randomBtn('Rolar 1d6')}
-        <div class="cards">${ALIGNMENTS.map((a) => card({ path: 'alignment', value: a.id, selected: c.alignment === a.id, title: a.name, body: `<span>${esc(ALIGN_DESC[a.id])}</span>` })).join('')}</div>`;
+        <div class="cards">${ALIGNMENTS.map((a) => card({ path: 'alignment', value: a.id, selected: c.alignment === a.id, title: a.name, iconId: a.id, body: `<span>${esc(ALIGN_DESC[a.id])}</span>` })).join('')}</div>`;
     },
     validate: (c) => (c.alignment ? null : 'Escolha um alinhamento.'),
   },
