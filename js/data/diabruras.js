@@ -14,6 +14,7 @@ export default {
   id: 'diabruras',
   name: 'Cursed Scroll 1: Diabruras',
   short: 'Diabruras',
+  cover: 'img/sd_suplemento_1_cover.jpg',
 
   classes: [
     {

@@ -10,6 +10,7 @@ export default {
   id: 'sol-da-meia-noite',
   name: 'Cursed Scroll 3: Sol da Meia-noite',
   short: 'Sol da Meia-noite',
+  cover: 'img/sd_suplemento_3_cover.jpg',
 
   classes: [
     {

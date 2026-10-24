@@ -50,3 +50,8 @@ Em **Settings → Pages**, escolha **Deploy from a branch**, branch `main`, past
 | `js/storage.js` | Salvamento local e exportação |
 
 Para adicionar um novo suplemento, crie um arquivo em `js/data/` no mesmo formato e registre-o em `js/data/index.js`.
+
+## Créditos visuais
+
+- Ilustração de fundo, logo e capas dos livros em `img/` são de Shadowdark RPG e dos suplementos Cursed Scroll (The Arcane Library), usadas como referência visual nesta ferramenta de fã.
+- Ícones de [game-icons.net](https://game-icons.net) (Lorc, Delapouite e colaboradores), licença [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Ficam em `js/icons.js`.

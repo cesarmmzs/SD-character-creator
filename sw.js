@@ -1,10 +1,12 @@
 // Guarda os arquivos do app para funcionar sem internet.
-const CACHE = 'sdcc-v2';
+const CACHE = 'sdcc-v3';
 const FILES = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icon.svg',
   'js/app.js', 'js/rules.js', 'js/random.js', 'js/wizard.js', 'js/sheet.js', 'js/ui.js', 'js/storage.js',
   'js/data/index.js', 'js/data/base.js', 'js/data/diabruras.js', 'js/data/areias-rubras.js', 'js/data/sol-da-meia-noite.js', 'js/data/glossary.js',
-  'js/data/magias-base.js', 'js/data/magias-suplementos.js',
+  'js/data/magias-base.js', 'js/data/magias-suplementos.js', 'js/icons.js',
+  'img/sd_background.jpg', 'img/sd_logo.png', 'img/livro_base_cover.jpg',
+  'img/sd_suplemento_1_cover.jpg', 'img/sd_suplemento_2_cover.jpg', 'img/sd_suplemento_3_cover.jpg',
 ];
 
 self.addEventListener('install', (e) => {

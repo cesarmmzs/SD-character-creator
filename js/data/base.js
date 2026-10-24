@@ -10,6 +10,7 @@ export default {
   id: 'base',
   name: 'Livro de Regras',
   short: 'Base',
+  cover: 'img/livro_base_cover.jpg',
   required: true,
 
   ancestries: [

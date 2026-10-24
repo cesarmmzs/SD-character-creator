@@ -11,6 +11,7 @@ export default {
   id: 'areias-rubras',
   name: 'Cursed Scroll 2: Areias Rubras',
   short: 'Areias Rubras',
+  cover: 'img/sd_suplemento_2_cover.jpg',
 
   classes: [
     {
