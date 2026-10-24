@@ -192,4 +192,9 @@ export const GLOSSARY = {
     text: 'Tudo o que você carrega. Use "−" e "+" para ajustar a quantidade, "usar" para gastar uma unidade (uma tocha, uma ração, uma flecha) e "×" para tirar o item. Você pode adicionar itens dos livros ou criar um item próprio, como um tesouro encontrado. Cada item ocupa espaços; seu limite é a Força ou 10, o que for maior.',
     page: 35,
   },
+  pvAtual: {
+    title: 'PV atual e PV máximo',
+    text: 'O PV máximo é calculado pelo app (dado de vida + Constituição no nível 1, mais um dado a cada nível). O PV atual é quanto resta agora: use "Dano" quando for ferido e "Cura" quando recuperar. Uma noite de descanso devolve todos os PV. Com 0 PV o personagem cai e morre em 1d4 + modificador de Constituição rodadas (mínimo 1), a menos que seja estabilizado (pág. 9).',
+    page: 12,
+  },
 };

@@ -45,10 +45,16 @@ export function randomClassChoices(rules, c) {
   }
 }
 
-export function randomBackground(rules, c) {
+// Tabela de antecedentes sugerida: a do livro da classe, ou a do livro base.
+export function defaultBackgroundTable(rules, c) {
   const cls = getClass(rules, c);
   const own = cls && rules.backgroundTables.find((t) => t.book === cls.book);
-  const table = own || rules.backgroundTables.find((t) => t.id === 'base');
+  return own || rules.backgroundTables.find((t) => t.id === 'base');
+}
+
+// Rola 1d20 na tabela escolhida pelo jogador (ou na sugerida, se nenhuma foi escolhida).
+export function randomBackground(rules, c, tableId = null) {
+  const table = rules.backgroundTables.find((t) => t.id === tableId) || defaultBackgroundTable(rules, c);
   const index = die(20) - 1;
   c.background = { table: table.id, index };
 }

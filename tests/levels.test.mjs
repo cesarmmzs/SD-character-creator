@@ -114,3 +114,33 @@ test('títulos mudam a cada dois níveis', () => {
   assert.notEqual(t(2), t(3));
   assert.equal(t(MAX_LEVEL), cls.titles.lawful[4]);
 });
+
+test('rolar antecedente usa a tabela escolhida', async () => {
+  const { randomBackground } = await import('../js/random.js');
+  const c = randomCharacter(rules, { level: 1, classPool: ['guerreiro'] });
+  for (const t of rules.backgroundTables) {
+    for (let i = 0; i < 20; i++) {
+      randomBackground(rules, c, t.id);
+      assert.equal(c.background.table, t.id);
+      assert.ok(c.background.index >= 0 && c.background.index < 20);
+    }
+  }
+});
+
+test('PV do nível 1: dado + Constituição, mínimo 1; PV atual fica entre 0 e o máximo', async () => {
+  const { currentHp } = await import('../js/rules.js');
+  const c = randomCharacter(rules, { level: 1, classPool: ['ladrao'] });
+  c.ancestry = 'humano';
+  c.talents = {};
+  c.stats.CON = 4; // modificador -3
+  c.hp = { rolls: [1] };
+  assert.equal(computeSheet(rules, c).hp, 1);
+  c.hp = { rolls: { 0: 4 } }; // valor digitado fica guardado como objeto
+  assert.equal(computeSheet(rules, c).hp, 1);
+  c.stats.CON = 16; // +3
+  assert.equal(computeSheet(rules, c).hp, 7);
+  assert.equal(currentHp({ hpCurrent: null }, 7), 7);
+  assert.equal(currentHp({ hpCurrent: 3 }, 7), 3);
+  assert.equal(currentHp({ hpCurrent: 12 }, 7), 7);
+  assert.equal(currentHp({ hpCurrent: -2 }, 7), 0);
+});

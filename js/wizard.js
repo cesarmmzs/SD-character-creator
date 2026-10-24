@@ -167,6 +167,22 @@ export function renderSpellPicker(rules, c, locked = []) {
     ${tiers}`;
 }
 
+// Conta do PV do nível 1 mostrada passo a passo: dado + modificador de Constituição, mínimo 1.
+function hpBreakdown(c, cls, step, con, dwarf) {
+  const dice = [];
+  for (let i = 0; i < step.count; i++) dice.push(i < step.maxed ? cls.hitDie : step.rolls[i]);
+  if (dice.some((r) => r == null)) return '';
+  const bad = dice.find((r) => !(r >= 1 && r <= cls.hitDie));
+  if (bad != null) return `<p class="error" role="alert">${esc(bad)} não é um resultado possível de 1d${cls.hitDie}. Digite de 1 a ${cls.hitDie}.</p>`;
+  const sum = dice.reduce((a, b) => a + b, 0);
+  const raw = sum + con;
+  const sign = (n) => (n < 0 ? `− ${-n}` : `+ ${n}`);
+  let text = `Conta: ${dice.join(' + ')} (dado) ${sign(con)} (Constituição) = ${raw}`;
+  if (raw < 1) text += ' → o mínimo é 1';
+  if (dwarf) text += `; ${sign(2)} de anão = ${Math.max(1, raw) + 2}`;
+  return `<p class="hp-math">${esc(text)}</p>`;
+}
+
 // ---------- Etapas ----------
 
 export const STEPS = [
@@ -272,11 +288,11 @@ export const STEPS = [
   {
     id: 'antecedente',
     title: 'Antecedente',
-    random: (rules, c) => R.randomBackground(rules, c),
+    random: (rules, c) => R.randomBackground(rules, c, c.background?.custom ? null : c.background?.table),
     render(c, rules) {
       const tables = rules.backgroundTables;
       const bg = c.background || {};
-      const tableId = bg.custom ? null : bg.table || tables[0].id;
+      const tableId = bg.custom ? null : bg.table || R.defaultBackgroundTable(rules, c).id;
       const table = tables.find((t) => t.id === tableId);
       const tabs = `<div class="chips">${tables.map((t) => `<button type="button" class="chip${t.id === tableId ? ' on' : ''}" data-act="bgTable" data-value="${t.id}">${esc(t.name)}</button>`).join('')}<button type="button" class="chip${bg.custom ? ' on' : ''}" data-act="bgCustom">Escrever o meu</button></div>`;
       let body;
@@ -422,7 +438,8 @@ export const STEPS = [
       return `${stepHeader('Pontos de vida', 'pv', `Role o dado de vida de ${esc(cls.name)} e some sua Constituição (${fmtMod(sheet.mods.CON)}). Mínimo de 1.${dwarf ? ' Anões rolam com Vantagem e ganham +2.' : ''}`)}
         ${rows}
         ${c.level >= 2 ? `<p class="muted small">Os dados de vida dos níveis 2 a ${c.level} já estão guardados e entram no total.</p>` : ''}
-        ${sheet.hp != null ? `<div class="big-number">${sheet.hp} PV</div>` : ''}`;
+        ${hpBreakdown(c, cls, step, sheet.mods.CON, dwarf)}
+        ${sheet.hp != null && !Array.from({ length: step.count - step.maxed }, (_, i) => step.rolls[step.maxed + i]).some((r) => r > cls.hitDie || r < 1) ? `<div class="big-number">${sheet.hp} PV</div>` : ''}`;
     },
     validate(c, rules) {
       if (c.level === 0) return null;
