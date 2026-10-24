@@ -26,9 +26,19 @@ function card({ act = 'set', path, value, selected, title, body, badge = '', ext
 }
 
 // Opção de livro com a capa ao fundo (primeira etapa e modo mestre).
-export function bookToggle(b, checked, act) {
+export function bookToggle(b, checked, act, locked = false) {
   return `<label class="book${checked ? ' on' : ''}"><span class="book-img" style="background-image:url('${esc(b.cover)}')"></span>
-    <span class="book-label"><input type="checkbox" data-act="${act}" value="${b.id}" ${checked ? 'checked' : ''} ${b.required ? 'disabled' : ''}> ${esc(b.name)}</span></label>`;
+    <span class="book-label"><input type="checkbox" data-act="${act}" value="${b.id}" ${checked ? 'checked' : ''} ${b.required || locked ? 'disabled' : ''}> ${esc(b.name)}</span></label>`;
+}
+
+// Depois do nível 1 a classe é fixa, então o livro dela não pode sair da mesa.
+export function classLocked(c) {
+  return c.level >= 2 && !!c.classId;
+}
+
+export function bookLocked(c, bookId) {
+  if (!classLocked(c)) return false;
+  return BOOKS.find((b) => b.id === bookId)?.classes?.some((k) => k.id === c.classId) ?? false;
 }
 
 const bookBadge = (item) => (item.book && item.book !== 'base' ? BOOKS.find((b) => b.id === item.book).short : '');
@@ -167,7 +177,7 @@ export function renderSpellPicker(rules, c, locked = []) {
     ${tiers}`;
 }
 
-// Conta do PV do nível 1 mostrada passo a passo: dado + modificador de Constituição, mínimo 1.
+// Conta do PV do nível 1 mostrada passo a passo: dado + modificador de Constituição (que vale no mínimo +1).
 function hpBreakdown(c, cls, step, con, dwarf) {
   const dice = [];
   for (let i = 0; i < step.count; i++) dice.push(i < step.maxed ? cls.hitDie : step.rolls[i]);
@@ -175,11 +185,11 @@ function hpBreakdown(c, cls, step, con, dwarf) {
   const bad = dice.find((r) => !(r >= 1 && r <= cls.hitDie));
   if (bad != null) return `<p class="error" role="alert">${esc(bad)} não é um resultado possível de 1d${cls.hitDie}. Digite de 1 a ${cls.hitDie}.</p>`;
   const sum = dice.reduce((a, b) => a + b, 0);
-  const raw = sum + con;
+  const conUsed = Math.max(1, con);
+  const total = sum + conUsed;
   const sign = (n) => (n < 0 ? `− ${-n}` : `+ ${n}`);
-  let text = `Conta: ${dice.join(' + ')} (dado) ${sign(con)} (Constituição) = ${raw}`;
-  if (raw < 1) text += ' → o mínimo é 1';
-  if (dwarf) text += `; ${sign(2)} de anão = ${Math.max(1, raw) + 2}`;
+  let text = `Conta: ${dice.join(' + ')} (dado) ${sign(conUsed)} (Constituição${con < 1 ? `: seu ${sign(con).replace(' ', '')} vale +1` : ''}) = ${total}`;
+  if (dwarf) text += `; ${sign(2)} de anão = ${total + 2}`;
   return `<p class="hp-math">${esc(text)}</p>`;
 }
 
@@ -199,8 +209,9 @@ export const STEPS = [
         </div>`}
         <h3>Livros da sua mesa ${help('livros')}</h3>
         <div class="books">
-          ${BOOKS.map((b) => bookToggle(b, c.books.includes(b.id), 'toggleBook')).join('')}
+          ${BOOKS.map((b) => bookToggle(b, c.books.includes(b.id), 'toggleBook', bookLocked(c, b.id))).join('')}
         </div>
+        ${BOOKS.some((b) => bookLocked(c, b.id)) ? '<p class="muted small">O livro da sua classe fica marcado: a classe não pode mais ser trocada.</p>' : ''}
         <div class="callout">
           <p><strong>Com pressa?</strong> Gere um personagem inteiro de uma vez e ajuste depois, se quiser.</p>
           <button type="button" class="btn" data-act="randomAll" ${c.level == null || fixedLevel ? 'disabled' : ''}>🎲 Sortear personagem completo</button>
@@ -238,7 +249,7 @@ export const STEPS = [
     render(c, rules) {
       const cls = getClass(rules, c);
       // Depois do nível 1 a classe fica fixa: trocar desfaria talentos, magias e PV de todos os níveis.
-      const locked = c.level >= 2;
+      const locked = classLocked(c);
       const cards = rules.classes.filter((k) => !locked || k.id === c.classId).map((k) => card({
         path: 'classId', value: k.id, selected: c.classId === k.id, title: k.name, badge: bookBadge(k), iconId: k.id,
         body: `<span>${esc(k.desc)}</span><span class="facts">Vida: d${k.hitDie} · Armas: ${esc(k.weaponsText)} · Armaduras: ${esc(k.armorText)}</span>`,
@@ -435,7 +446,7 @@ export const STEPS = [
         return `<div class="slot"><strong>${i === 0 ? 'Dado de vida' : 'Dado extra (Lótus Negra)'}: d${cls.hitDie}</strong>
           ${maxed ? `<p>Um talento faz este dado valer o máximo: <strong>${cls.hitDie}</strong>.</p>` : diceInput('rollHp', `hp.rolls.${i}`, { label: 'Dado de vida', dice: `1d${cls.hitDie}${dwarf ? ' com Vantagem' : ''}`, value: rolls[i] })}</div>`;
       }).join('');
-      return `${stepHeader('Pontos de vida', 'pv', `Role o dado de vida de ${esc(cls.name)} e some sua Constituição (${fmtMod(sheet.mods.CON)}). Mínimo de 1.${dwarf ? ' Anões rolam com Vantagem e ganham +2.' : ''}`)}
+      return `${stepHeader('Pontos de vida', 'pv', `Role o dado de vida de ${esc(cls.name)} e some sua Constituição (${fmtMod(sheet.mods.CON)}). Se a Constituição for menor que +1, ela conta como +1.${dwarf ? ' Anões rolam com Vantagem e ganham +2.' : ''}`)}
         ${rows}
         ${c.level >= 2 ? `<p class="muted small">Os dados de vida dos níveis 2 a ${c.level} já estão guardados e entram no total.</p>` : ''}
         ${hpBreakdown(c, cls, step, sheet.mods.CON, dwarf)}
@@ -487,7 +498,8 @@ export const STEPS = [
       if (!c.equipMode) return 'Escolha o pacote rápido ou faça compras.';
       if (c.equipMode === 'shop' && c.goldRoll == null) return 'Role seu ouro inicial.';
       const sheet = computeSheet(rules, c);
-      if (sheet.used > sheet.capacity) return 'Você está carregando mais do que aguenta. Tire alguns itens.';
+      // Na criação o excesso trava; ao editar um personagem salvo vira só um aviso (a mochila é cuidada na ficha).
+      if (sheet.used > sheet.capacity && !c.editing) return 'Você está carregando mais do que aguenta. Tire alguns itens.';
       return null;
     },
   },

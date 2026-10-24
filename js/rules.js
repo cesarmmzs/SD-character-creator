@@ -537,8 +537,9 @@ export function computeHP(rules, c, mods) {
   const steps = hpSteps(rules, c);
   const first = sumStep(steps[0], cls.hitDie);
   if (first == null) return null;
-  // A Constituição só entra no nível 1; nos seguintes, soma-se apenas o dado.
-  let total = Math.max(1, first + mods.CON) + dwarf;
+  // Regra da mesa: no nível 1 a Constituição vale no mínimo +1 (dado 1 com CON negativa = 2 PV).
+  // Ela só entra no nível 1; nos seguintes, soma-se apenas o dado.
+  let total = first + Math.max(1, mods.CON) + dwarf;
   for (const st of steps.slice(1)) {
     const v = sumStep(st, cls.hitDie);
     if (v == null) return null;
