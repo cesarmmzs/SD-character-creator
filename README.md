@@ -4,6 +4,9 @@ Aplicativo web para criar personagens de **Shadowdark RPG** passo a passo, pensa
 
 Ferramenta de fã, não oficial. Shadowdark RPG é da The Arcane Library. Os textos do app são resumos escritos com palavras próprias, com a página do livro para consulta; tenha seu livro em mãos para as regras completas.
 
+## Endereço da página 
+ https://<usuario>.github.io/SD-character-creator/
+
 ## O que ele faz
 
 - Criação de personagem de **nível 0** ou **nível 1**, etapa por etapa.
@@ -32,10 +35,6 @@ python3 -m http.server 8000
 ```sh
 node --test tests/*.test.mjs
 ```
-
-## Publicar no GitHub Pages
-
-Em **Settings → Pages**, escolha **Deploy from a branch**, branch `main`, pasta `/ (root)`. O endereço fica `https://<usuario>.github.io/SD-character-creator/`.
 
 ## Estrutura
 
