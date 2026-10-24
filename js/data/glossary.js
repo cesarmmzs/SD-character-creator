@@ -189,7 +189,7 @@ export const GLOSSARY = {
   },
   mochila: {
     title: 'Mochila',
-    text: 'Tudo o que você carrega. Use "−" e "+" para ajustar a quantidade, "usar" para gastar uma unidade (uma tocha, uma ração, uma flecha) e "×" para tirar o item. Você pode adicionar itens dos livros ou criar um item próprio, como um tesouro encontrado. Cada item ocupa espaços; seu limite é a Força ou 10, o que for maior.',
+    text: 'Tudo o que você carrega. Use "−" e "+" para ajustar a quantidade, "usar" para gastar uma unidade (uma tocha, uma ração, uma flecha), "guardar" para separar uma unidade (ela aparece em verde, marcada como guardada, e "pegar" a devolve) e "×" para tirar o item. Usar e remover sempre pedem confirmação. Você pode adicionar itens dos livros ou criar um item próprio, como um tesouro encontrado. Cada item ocupa espaços; seu limite é a Força ou 10, o que for maior.',
     page: 35,
   },
   pvAtual: {

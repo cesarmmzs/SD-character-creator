@@ -35,7 +35,28 @@ export function openHelp(el) {
   else showSheet({ title: el.dataset.title, text: el.dataset.text, page: el.dataset.page });
 }
 
+// Confirmação na própria tela, para evitar toques acidentais.
+let pending = null;
+export function askConfirm({ title, text, ok = 'Confirmar' }, onOk) {
+  pending = onOk;
+  document.getElementById('toast').hidden = true;
+  showSheet({
+    title,
+    html: `<p>${esc(text)}</p><div class="confirm-acts">
+      <button type="button" class="btn primary" data-act="confirmYes">${esc(ok)}</button>
+      <button type="button" class="btn ghost" data-act="closeSheet">Cancelar</button></div>`,
+  });
+  document.querySelector('#sheet [data-act="confirmYes"]').focus();
+}
+
+export function takeConfirm() {
+  const fn = pending;
+  pending = null;
+  return fn;
+}
+
 export function closeSheet() {
+  pending = null;
   document.getElementById('sheet').hidden = true;
 }
 

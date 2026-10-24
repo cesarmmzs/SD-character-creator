@@ -476,18 +476,22 @@ export function itemOf(rules, inv) {
 
 export function slotsUsed(rules, c) {
   let used = coinSlots(coinsOf(c));
+  const gear = new Map();
   for (const inv of c.inventory) {
     const item = itemOf(rules, inv);
     if (!item) continue;
     if (item.cat === 'custom') {
       used += item.slots * inv.qty;
     } else if (item.cat === 'gear') {
-      const qty = Math.max(0, inv.qty - (item.freeFirst || 0));
-      used += Math.ceil(qty / item.perSlot);
+      // Itens guardados ficam em linha própria; somamos tudo antes de dividir por espaço.
+      const g = gear.get(item.id) || { item, qty: 0 };
+      g.qty += inv.qty;
+      gear.set(item.id, g);
     } else {
       used += (item.slots ?? 1) * inv.qty;
     }
   }
+  for (const { item, qty } of gear.values()) used += Math.ceil(Math.max(0, qty - (item.freeFirst || 0)) / item.perSlot);
   return used;
 }
 
@@ -641,12 +645,25 @@ export function computeSheet(rules, c) {
 // ---------- Equipamento ----------
 
 export function addItem(c, id, qty = 1) {
-  const inv = c.inventory.find((i) => i.id === id);
+  const inv = c.inventory.find((i) => i.id === id && !i.stored);
   if (inv) inv.qty += qty; else c.inventory.push({ id, qty });
 }
 
+// Guarda uma unidade: ela sai da linha original e vai para a linha "guardado" do mesmo item.
+// Com back = true faz o caminho inverso.
+export function stowItem(c, index, back = false) {
+  const inv = c.inventory[index];
+  if (!inv || inv.qty < 1 || !!inv.stored === !back) return false;
+  const { qty, stored, note, ...same } = inv;
+  const target = c.inventory.find((i) => i !== inv && i.id === inv.id && !!i.stored === !back);
+  if (target) target.qty += 1;
+  else c.inventory.splice(back ? index : index + 1, 0, { ...same, qty: 1, ...(back ? {} : { stored: true }), ...(note ? { note } : {}) });
+  inv.qty -= 1;
+  return true;
+}
+
 export function removeItem(c, id, qty = 1) {
-  const inv = c.inventory.find((i) => i.id === id);
+  const inv = c.inventory.find((i) => i.id === id && !i.stored);
   if (!inv) return;
   inv.qty -= qty;
   if (inv.qty <= 0) c.inventory = c.inventory.filter((i) => i !== inv);
