@@ -6,7 +6,7 @@ import {
   MAX_LEVEL, fmtMod, currentHp, stowItem,
 } from './rules.js';
 import * as R from './random.js';
-import { STEPS, visibleSteps, renderTalentSlot, renderSpellPicker, bookToggle } from './wizard.js';
+import { STEPS, visibleSteps, renderTalentSlot, renderSpellPicker, bookToggle, bookLocked } from './wizard.js';
 import { renderSheet, summaryLine } from './sheet.js';
 import * as store from './storage.js';
 import { esc, help, openHelp, closeSheet, askConfirm, takeConfirm, toast, getAt, setAt, diceInput } from './ui.js';
@@ -398,6 +398,7 @@ const actions = {
     }
     delete c.stepId;
     delete c.promoted;
+    delete c.editing;
     // A bolsa nasce do dinheiro que sobrou das compras; depois disso é controlada na ficha.
     if (!c.coins) c.coins = splitMoney(c.gold || 0);
     if (!store.saveCharacter(c)) { toast('Não foi possível salvar neste navegador.'); return; }
@@ -409,6 +410,7 @@ const actions = {
 
   edit(el) {
     state.char = structuredClone(store.getCharacter(el.dataset.value));
+    state.char.editing = true;
     state.stepId = 'inicio';
     persist();
     go('#/criar');
@@ -654,6 +656,7 @@ function changeCoins(id, sign) {
 const changeActions = {
   toggleBook(el) {
     const c = state.char;
+    if (!el.checked && bookLocked(c, el.value)) return;
     c.books = el.checked ? [...new Set([...c.books, el.value])] : c.books.filter((b) => b !== el.value);
     const rules = rulesFor(c.books);
     if (c.classId && !rules.classes.some((k) => k.id === c.classId)) { c.classId = null; resetFromClass(c); }

@@ -81,11 +81,11 @@ test('talento de PV máximo vale para as próximas rolagens de vida', () => {
   const d = getClass(rules, c).hitDie;
   const mods = computeSheet(rules, c).mods;
   const dwarf = c.ancestry === 'anao' ? 2 : 0;
-  assert.equal(computeSheet(rules, c).hp, Math.max(1, d + mods.CON) + dwarf);
+  assert.equal(computeSheet(rules, c).hp, d + Math.max(1, mods.CON) + dwarf);
   c = nextLevel(c);
   assert.equal(hpSteps(rules, c)[1].maxed, 1, 'segunda rolagem também no máximo');
   assert.equal(levelUpError(rules, c), null);
-  assert.equal(computeSheet(rules, c).hp, Math.max(1, d + mods.CON) + dwarf + d);
+  assert.equal(computeSheet(rules, c).hp, d + Math.max(1, mods.CON) + dwarf + d);
   c = nextLevel(c);
   assert.equal(hpSteps(rules, c)[2].maxed, 0, 'só duas rolagens');
 });
@@ -127,16 +127,18 @@ test('rolar antecedente usa a tabela escolhida', async () => {
   }
 });
 
-test('PV do nível 1: dado + Constituição, mínimo 1; PV atual fica entre 0 e o máximo', async () => {
+test('PV do nível 1: dado + Constituição (que vale no mínimo +1); PV atual fica entre 0 e o máximo', async () => {
   const { currentHp } = await import('../js/rules.js');
   const c = randomCharacter(rules, { level: 1, classPool: ['ladrao'] });
   c.ancestry = 'humano';
   c.talents = {};
   c.stats.CON = 4; // modificador -3
   c.hp = { rolls: [1] };
-  assert.equal(computeSheet(rules, c).hp, 1);
+  assert.equal(computeSheet(rules, c).hp, 2);
   c.hp = { rolls: { 0: 4 } }; // valor digitado fica guardado como objeto
-  assert.equal(computeSheet(rules, c).hp, 1);
+  assert.equal(computeSheet(rules, c).hp, 5);
+  c.stats.CON = 10; // +0 também vale +1
+  assert.equal(computeSheet(rules, c).hp, 5);
   c.stats.CON = 16; // +3
   assert.equal(computeSheet(rules, c).hp, 7);
   assert.equal(currentHp({ hpCurrent: null }, 7), 7);

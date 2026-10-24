@@ -89,7 +89,7 @@ export const GLOSSARY = {
   },
   pv: {
     title: 'Pontos de vida (PV)',
-    text: 'Quanto dano você aguenta. No nível 0 é seu modificador de Constituição (mínimo 1). No nível 1 é o dado de vida da classe + modificador de Constituição (mínimo 1). Ao chegar a 0 PV, você está morrendo.',
+    text: 'Quanto dano você aguenta. No nível 0 é seu modificador de Constituição (mínimo 1). No nível 1 é o dado de vida da classe + modificador de Constituição; se o modificador for menor que +1, conta como +1 (dado 1 com Constituição negativa dá 2 PV). Ao chegar a 0 PV, você está morrendo.',
     page: 14,
   },
   ca: {
