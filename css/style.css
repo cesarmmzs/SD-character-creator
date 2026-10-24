@@ -183,6 +183,37 @@ th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--line
 .gm-grid { display: grid; gap: 12px; }
 @media (min-width: 720px) { .gm-grid { grid-template-columns: 1fr 1fr; } }
 
+/* Ficha: experiência e subir de nível */
+.level-panel h3 { margin-top: 0; }
+.xp-bar { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.xp-bar span { display: block; height: 100%; background: var(--accent); }
+.inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.inline-form input[type=number] { width: 96px; flex: none; }
+.inline-form select { width: auto; flex: 1 1 140px; }
+.inline-form label { display: flex; align-items: center; gap: 6px; }
+.spell-tier summary { cursor: pointer; padding: 4px 0; }
+.level-up .slot h3 { margin-top: 0; }
+
+/* Ficha: mochila */
+.backpack .carry { position: static; }
+.backpack h4 { margin: 1em 0 .4em; }
+.coins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.coin { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border: 2px solid var(--line); border-radius: 10px; }
+.coin-num { font-size: 1.5rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.coin-po { border-color: #b8902e; }
+.coin-pp { border-color: #9aa0a6; }
+.coin-pc { border-color: #a0603a; }
+.inv-table { list-style: none; padding: 0; margin: 0; }
+.inv-row { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "name name" "qty acts" "slots acts"; gap: 4px 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+@media (min-width: 560px) { .inv-row { grid-template-columns: 1fr auto 64px auto; grid-template-areas: "name qty slots acts"; } }
+.inv-name { grid-area: name; }
+.inv-row .stepper { grid-area: qty; }
+.inv-slots { grid-area: slots; }
+.inv-acts { grid-area: acts; display: flex; gap: 6px; justify-content: flex-end; }
+.inv-note { min-height: 34px !important; margin-top: 4px; padding: 4px 8px !important; font-size: .85rem !important; border-style: dashed !important; }
+.add-item summary { cursor: pointer; }
+.add-item h4:first-of-type { margin-top: .6em; }
+
 /* Explicações (gaveta inferior) */
 .bottom-sheet { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, .45); }
 .bottom-sheet[hidden] { display: none; }
@@ -198,5 +229,8 @@ th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--line
   .no-print, .top, .foot, .help, .step-nav { display: none !important; }
   .container { max-width: none; padding: 0; }
   .sheet-card { border: 0; padding: 0; break-inside: avoid; }
+  .inv-acts, .stepper button { display: none !important; }
+  .inv-note { border: 0 !important; padding: 0 !important; }
+  .inv-note:placeholder-shown { display: none; }
   .gm-card { break-inside: avoid; border-bottom: 1px solid #999; padding-bottom: 12px; margin-bottom: 12px; }
 }

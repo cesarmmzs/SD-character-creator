@@ -4,6 +4,7 @@ import {
   die, rollDice, pickOne, rollStats, canRerollStats, newCharacter, getClass, getAncestry,
   entryFor, rollSubSlots, talentSlots, languageGroups, spellOptions, spellsAllowed, computeSheet,
   weaponAllowed, quickWeapon, applyQuickPack, rollLevel0Gear, fixedLanguages,
+  spellStatus, canAddSpell, hpSteps, nextLevel, MAX_LEVEL,
 } from './rules.js';
 
 export function randomStats(c) {
@@ -138,11 +139,22 @@ export function randomTalents(rules, c) {
   for (const s of talentSlots(rules, c)) c.talents[s.key] = randomSlot(rules, c, s.table);
 }
 
+// Completa as magias que faltam, grau por grau, sem mexer nas já escolhidas.
+export function fillSpells(rules, c) {
+  for (let guard = 0; guard < 60; guard++) {
+    const st = spellStatus(rules, c);
+    let tier = st.tiers.findIndex((n, i) => st.counts[i] < n) + 1;
+    if (!tier && st.extraUsed < st.extra) tier = die(st.maxTier);
+    if (!tier) return;
+    const pool = spellOptions(rules, c, tier).filter((sp) => !c.spells.includes(sp.id));
+    if (!pool.length || !canAddSpell(st, tier)) return;
+    c.spells.push(pickOne(pool).id);
+  }
+}
+
 export function randomSpells(rules, c) {
-  const pool = [...spellOptions(rules, c)];
-  const n = spellsAllowed(rules, c);
   c.spells = [];
-  while (c.spells.length < n && pool.length) c.spells.push(pool.splice(die(pool.length) - 1, 1)[0].id);
+  fillSpells(rules, c);
 }
 
 export function rollHpDie(rules, c) {
@@ -152,7 +164,7 @@ export function rollHpDie(rules, c) {
 }
 
 export function randomHp(rules, c, count) {
-  if (c.level !== 1) { c.hp = null; return; }
+  if (!(c.level >= 1)) { c.hp = null; return; }
   c.hp = { rolls: Array.from({ length: count }, () => rollHpDie(rules, c)) };
 }
 
@@ -172,9 +184,28 @@ export function randomName(rules, c) {
   return pickOne(list);
 }
 
+// Escolhas de um novo nível (2 em diante), feitas ao acaso.
+export function randomLevelChoices(rules, c) {
+  const n = c.level;
+  // O talento vem antes: alguns dão um dado de vida extra neste nível.
+  const slot = talentSlots(rules, c).find((s) => s.key === `lvl${n}`);
+  if (slot) c.talents[slot.key] = randomSlot(rules, c, slot.table);
+  const step = hpSteps(rules, c)[n - 1];
+  c.levels[n].hpRolls = Array.from({ length: step.count }, () => rollHpDie(rules, c));
+  fillSpells(rules, c);
+}
+
+export function randomLevelUp(rules, c) {
+  const next = nextLevel(c);
+  randomLevelChoices(rules, next);
+  return next;
+}
+
 // Personagem completo, pronto para jogar.
 export function randomCharacter(rules, { level = 1, classPool = null, group = '' } = {}) {
-  const c = newCharacter(rules.books);
+  let c = newCharacter(rules.books);
+  const target = Math.min(MAX_LEVEL, level);
+  level = Math.min(1, target);
   c.level = level;
   c.group = group;
   randomStats(c);
@@ -193,6 +224,7 @@ export function randomCharacter(rules, { level = 1, classPool = null, group = ''
   }
   randomEquipment(rules, c);
   c.name = randomName(rules, c);
+  while (c.level < target) c = randomLevelUp(rules, c);
   return c;
 }
 

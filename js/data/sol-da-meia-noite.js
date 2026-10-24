@@ -1,4 +1,8 @@
 // Cursed Scroll 3: Sol da Meia-noite. Textos resumidos com palavras próprias.
+import { VIDENTE_SUPERIORES } from './magias-suplementos.js';
+
+// Magias conhecidas por grau, do nível 1 ao 10, conforme a tabela da classe.
+const SEER_SPELLS = [[1], [2], [2, 1], [2, 2], [2, 2, 1], [2, 2, 2], [2, 2, 2, 1], [2, 2, 2, 2], [2, 2, 2, 2, 1], [2, 2, 2, 2, 2]];
 
 const pick = { min: 12, max: 12, text: 'Escolha um talento desta tabela ou distribua +2 pontos de atributo', effect: { kind: 'pick' } };
 
@@ -36,7 +40,7 @@ export default {
         { name: 'Presságio', desc: '3 vezes por dia, um teste de Sabedoria CD 9 dá uma ficha de sorte (máximo de uma por vez).' },
         { name: 'Conjuração', desc: 'Conjura magias de vidente com 1d20 + modificador de Sabedoria, CD 10 + grau. Se falhar, não repete até descansar; com um 1 natural, só volta a usá-la após uma Penitência. Conhece 1 magia de grau 1.' },
       ],
-      spellcasting: { list: 'vidente', stat: 'SAB', known: 1 },
+      spellcasting: { list: 'vidente', stat: 'SAB', known: 1, byLevel: SEER_SPELLS },
       talents: 'vidente',
       titles: {
         lawful: ['Guia', 'Encantador', 'Leitor de Runas', 'O Sábio', 'Vidente de Odin'],
@@ -115,6 +119,7 @@ export default {
       { id: 'evocar-furia', name: 'Evocar Fúria', tier: 1, desc: 'Um humanoide voluntário entra em fúria por 1d4 rodadas: imune a moral, Vantagem em Força e ataques corpo a corpo, +1d4 de dano.' },
       { id: 'pocao', name: 'Poção', tier: 1, desc: 'Abençoa uma dose de líquido por 1 dia: quem beber cura um veneno ou é estabilizado a 0 PV.' },
       { id: 'transe', name: 'Transe', tier: 1, desc: 'Um humanoide que você toca (não você) ganha uma ficha de sorte.' },
+      ...VIDENTE_SUPERIORES,
     ],
   },
 

@@ -1,13 +1,15 @@
 // Aplicativo: navegação, tela inicial, modo mestre e tratamento de eventos.
 import { loadRules, DEFAULT_BOOKS, BOOKS } from './data/index.js';
 import {
-  newCharacter, rollStats, rollDice, roll, getClass, findItem, addItem, removeItem, buyQty, applyQuickPack, applyKit,
+  newCharacter, rollStats, rollDice, roll, getClass, findItem, itemOf, addItem, removeItem, buyQty, applyQuickPack, applyKit,
+  splitMoney, coinsOf, COINS, xpNeeded, nextLevel, levelUpError, talentSlots, hpSteps, spellStatus, computeSheet, titleFor,
+  MAX_LEVEL, fmtMod,
 } from './rules.js';
 import * as R from './random.js';
-import { STEPS, visibleSteps } from './wizard.js';
+import { STEPS, visibleSteps, renderTalentSlot, renderSpellPicker } from './wizard.js';
 import { renderSheet, summaryLine } from './sheet.js';
 import * as store from './storage.js';
-import { esc, help, openHelp, closeSheet, toast, getAt, setAt } from './ui.js';
+import { esc, help, openHelp, closeSheet, toast, getAt, setAt, diceInput } from './ui.js';
 
 const app = document.getElementById('app');
 const rulesCache = new Map();
@@ -20,6 +22,9 @@ function rulesFor(books) {
 const prefs = store.loadPrefs();
 const state = {
   char: null,
+  levelUp: null, // { id, spells } quando a tela "Subir de nível" está aberta
+  addOpen: null, // ficha com o painel "Adicionar item" aberto
+
   stepId: 'inicio',
   error: null,
   gm: { count: 4, level: 0, classPool: [], group: '', books: prefs.books || DEFAULT_BOOKS, results: [] },
@@ -36,7 +41,7 @@ function go(hash) {
   if (location.hash === hash) render(); else location.hash = hash;
 }
 
-window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { state.addOpen = null; render(); window.scrollTo(0, 0); });
 
 // ---------- Telas ----------
 
@@ -107,7 +112,50 @@ function viewSheet(id) {
       <button type="button" class="btn" data-act="exportOne" data-value="${esc(id)}">Exportar</button>
       <button type="button" class="btn" data-act="duplicate" data-value="${esc(id)}">Duplicar</button>
       <button type="button" class="btn danger" data-act="delete" data-value="${esc(id)}">Excluir</button>
-    </div>${renderSheet(rules, c)}`;
+    </div>${renderSheet(rules, c, { interactive: true, addOpen: state.addOpen === id })}`;
+}
+
+function viewLevelUp(id) {
+  const c = state.char;
+  if (!c || state.levelUp?.id !== id) { go(`#/ficha/${id}`); return ''; }
+  const rules = rulesFor(c.books);
+  const cls = getClass(rules, c);
+  const n = c.level;
+  const before = store.getCharacter(id);
+  const sheetBefore = computeSheet(rules, before);
+  const sheet = computeSheet(rules, c);
+  const dwarf = sheet.anc?.id === 'anao';
+  const step = hpSteps(rules, c)[n - 1];
+  const hpRows = Array.from({ length: step.count }, (_, i) => (i < step.maxed
+    ? `<p>Um talento faz este dado valer o máximo: <strong>${cls.hitDie}</strong>.</p>`
+    : diceInput('rollHp', `levels.${n}.hpRolls.${i}`, { label: 'Dado de vida', dice: `1d${cls.hitDie}${dwarf ? ' com Vantagem' : ''}`, value: step.rolls[i] }))).join('');
+  const slot = talentSlots(rules, c).find((s) => s.key === `lvl${n}`);
+  const st = spellStatus(rules, c);
+  const stBefore = spellStatus(rules, before);
+  const newSpells = st.total > stBefore.total;
+  const newTitle = titleFor(cls, c);
+  const oldTitle = titleFor(cls, before);
+  const err = state.error;
+  return `<div class="wizard level-up">
+    <section class="step">
+      <h2>Subir para o nível ${n} ${help('subirNivel')}</h2>
+      <p class="intro">${esc(c.name)} · ${esc(cls.name)}. Só aparece aqui o que muda neste nível.</p>
+      ${newTitle !== oldTitle ? `<p class="callout">Novo título: <strong>${esc(newTitle)}</strong> ${help('titulo')} <span class="muted small">(antes: ${esc(oldTitle)})</span></p>` : ''}
+      <div class="slot"><h3>Pontos de vida ${help('pv')}</h3>
+        <p>Role o dado de vida de ${esc(cls.name)} e some ao seu máximo.${dwarf ? ' Anões rolam com Vantagem.' : ''} A Constituição não entra de novo.</p>
+        ${hpRows}
+        <p>PV máximo: <strong>${sheetBefore.hp ?? '–'}</strong> → <strong>${sheet.hp ?? '?'}</strong></p>
+      </div>
+      ${slot ? `<h3>Novo talento ${help('talentos')}</h3>${renderTalentSlot(rules, c, slot)}` : `<p class="muted">Sem rolagem de talento neste nível (só nos níveis 3, 5, 7 e 9).</p>`}
+      ${newSpells ? `<h3>Novas magias ${help('magias')}</h3><p class="intro">Você passa a conhecer ${st.total} magias. Teste de conjuração: 1d20 ${fmtMod(sheet.casting.bonus)}.</p>${renderSpellPicker(rules, c, state.levelUp.spells)}` : ''}
+    </section>
+    ${err ? `<p class="error" role="alert">${esc(err)}</p>` : ''}
+    <nav class="step-nav">
+      <button type="button" class="btn" data-act="levelCancel">Cancelar</button>
+      <button type="button" class="btn ghost" data-act="levelRandom">🎲 Rolar tudo</button>
+      <button type="button" class="btn primary" data-act="levelConfirm">Confirmar nível ${n}</button>
+    </nav>
+  </div>`;
 }
 
 function viewGM() {
@@ -123,11 +171,11 @@ function viewGM() {
       <div class="panel">
         <div class="field-row">
           <label class="field">Quantos? <input type="number" min="1" max="30" inputmode="numeric" data-gm="count" value="${gm.count}"></label>
-          <label class="field">Nível <select data-gm="level"><option value="0" ${gm.level === 0 ? 'selected' : ''}>Nível 0</option><option value="1" ${gm.level === 1 ? 'selected' : ''}>Nível 1</option></select></label>
+          <label class="field">Nível <select data-gm="level">${Array.from({ length: MAX_LEVEL + 1 }, (_, i) => `<option value="${i}" ${gm.level === i ? 'selected' : ''}>Nível ${i}</option>`).join('')}</select></label>
         </div>
         <label class="field">Nome do grupo (opcional) <input type="text" data-gm="group" value="${esc(gm.group)}" placeholder="Ex.: Mesa de sexta, Provação da Ana"></label>
         <fieldset><legend>Livros</legend>${BOOKS.map((b) => `<label class="toggle"><input type="checkbox" data-act="gmBook" value="${b.id}" ${gm.books.includes(b.id) ? 'checked' : ''} ${b.required ? 'disabled' : ''}> ${esc(b.name)}</label>`).join('')}</fieldset>
-        ${gm.level === 1 ? `<details><summary>Limitar classes (${gm.classPool.length ? gm.classPool.length : 'todas'})</summary><div class="checks">${classes}</div></details>` : ''}
+        ${gm.level >= 1 ? `<details><summary>Limitar classes (${gm.classPool.length ? gm.classPool.length : 'todas'})</summary><div class="checks">${classes}</div></details>` : ''}
         <button type="button" class="btn primary" data-act="gmGenerate">🎲 Gerar personagens</button>
       </div>
     </section>
@@ -141,7 +189,8 @@ function render() {
     const draft = store.loadDraft();
     if (draft) state.char = draft;
   }
-  const html = view === 'criar' ? viewWizard() : view === 'ficha' ? viewSheet(id) : view === 'mestre' ? viewGM() : viewHome();
+  if (view !== 'nivel' && state.levelUp) { state.levelUp = null; state.char = null; }
+  const html = view === 'criar' ? viewWizard() : view === 'ficha' ? viewSheet(id) : view === 'nivel' ? viewLevelUp(id) : view === 'mestre' ? viewGM() : viewHome();
   app.innerHTML = html;
   document.querySelectorAll('.top-nav a').forEach((a) => a.classList.toggle('on', a.getAttribute('href') === `#/${view === 'inicio' ? '' : view}`));
 }
@@ -149,7 +198,7 @@ function render() {
 // ---------- Mudanças no personagem ----------
 
 function persist() {
-  if (state.char) { state.char.stepId = state.stepId; store.saveDraft(state.char); }
+  if (state.char && !state.levelUp) { state.char.stepId = state.stepId; store.saveDraft(state.char); }
 }
 
 function resetFromClass(c) {
@@ -204,7 +253,7 @@ function applyBind(el) {
   const parent = path.split('.').slice(0, -1).join('.');
   const last = path.split('.').pop();
   if (path === 'goldDice') {
-    if (value >= 2 && value <= 12) { c.goldRoll = value * 500; c.gold = c.goldRoll; }
+    if (value >= 2 && value <= 12) { c.goldRoll = value * 500; c.gold = c.goldRoll; c.coins = null; }
     return;
   }
   if (last === 'pick') {
@@ -248,7 +297,7 @@ const actions = {
     const c = state.char;
     const rules = rulesFor(c.books);
     if (el.dataset.value === 'quick') applyQuickPack(rules, c);
-    else { c.inventory = []; c.gold = null; c.goldRoll = null; c.equipMode = 'shop'; }
+    else { c.inventory = []; c.gold = null; c.goldRoll = null; c.coins = null; c.equipMode = 'shop'; }
   },
   randomAll() {
     const c = state.char;
@@ -276,13 +325,14 @@ const actions = {
     const rules = rulesFor(state.char.books);
     setAt(state.char, el.dataset.path, R.rollHpDie(rules, state.char));
   },
-  rollGold() { const r = roll(2, 6); state.char.goldRoll = r * 500; state.char.gold = state.char.goldRoll; toast(`2d6 = ${r}: ${r * 5} PO`); },
-  resetShop() { const c = state.char; c.inventory = []; c.gold = c.goldRoll; },
+  rollGold() { const r = roll(2, 6); state.char.goldRoll = r * 500; state.char.gold = state.char.goldRoll; state.char.coins = null; toast(`2d6 = ${r}: ${r * 5} PO`); },
+  resetShop() { const c = state.char; c.inventory = []; c.gold = c.goldRoll; c.coins = null; },
   buy(el) {
     const c = state.char;
     const item = findItem(rulesFor(c.books), el.dataset.value);
     if (!item || c.gold < item.cost) return;
     c.gold -= item.cost;
+    c.coins = null;
     addItem(c, item.id, buyQty(item));
   },
   sell(el) {
@@ -293,12 +343,14 @@ const actions = {
     const n = Math.min(buyQty(item), inv.qty);
     removeItem(c, item.id, n);
     c.gold += Math.round(item.cost * (n / buyQty(item)));
+    c.coins = null;
   },
   buyKit() {
     const c = state.char;
     const rules = rulesFor(c.books);
     if (c.gold < rules.kit.cost) return;
     c.gold -= rules.kit.cost;
+    c.coins = null;
     applyKit(rules, c);
   },
   dropItem(el) {
@@ -340,6 +392,9 @@ const actions = {
       if (err) { state.stepId = step.id; state.error = err; return; }
     }
     delete c.stepId;
+    delete c.promoted;
+    // A bolsa nasce do dinheiro que sobrou das compras; depois disso é controlada na ficha.
+    if (!c.coins) c.coins = splitMoney(c.gold || 0);
     if (!store.saveCharacter(c)) { toast('Não foi possível salvar neste navegador.'); return; }
     store.clearDraft();
     state.char = null;
@@ -373,6 +428,100 @@ const actions = {
   },
   exportAll() { store.downloadJSON('personagens-shadowdark.json', { app: 'sd-character-creator', characters: store.listCharacters() }); },
 
+  // ----- Ficha: XP, subir de nível, moedas e mochila -----
+  xpAdd(el) { changeXp(el.dataset.value, 1); },
+  xpSub(el) { changeXp(el.dataset.value, -1); },
+  levelUp(el) {
+    const c = store.getCharacter(el.dataset.value);
+    if (!c || c.level >= MAX_LEVEL) return;
+    state.error = null;
+    if (c.level === 0) {
+      // Do nível 0 para o 1: volta ao assistente para escolher classe, talento, magias e PV.
+      const next = nextLevel(c);
+      next.promoted = true;
+      next.hp = null;
+      state.char = next;
+      state.stepId = 'classe';
+      persist();
+      go('#/criar');
+      return;
+    }
+    state.char = nextLevel(c);
+    state.levelUp = { id: c.id, spells: [...c.spells] };
+    go(`#/nivel/${c.id}`);
+  },
+  talentTable(el) {
+    const c = state.char;
+    const n = Number(el.dataset.level);
+    c.levels[n] = { ...(c.levels[n] || {}), talentTable: el.dataset.value };
+    c.talents[`lvl${n}`] = {};
+  },
+  levelRandom() {
+    const c = state.char;
+    const n = c.level;
+    const rules = rulesFor(c.books);
+    const keep = c.levels[n].talentTable;
+    c.spells = [...state.levelUp.spells];
+    R.randomLevelChoices(rules, c);
+    if (keep) c.levels[n].talentTable = keep;
+  },
+  levelCancel() {
+    const id = state.levelUp.id;
+    state.levelUp = null;
+    state.char = null;
+    state.error = null;
+    go(`#/ficha/${id}`);
+  },
+  levelConfirm() {
+    const c = state.char;
+    const err = levelUpError(rulesFor(c.books), c);
+    if (err) { state.error = err; return; }
+    state.error = null;
+    state.levelUp = null;
+    state.char = null;
+    store.saveCharacter(c);
+    toast(`${c.name} chegou ao nível ${c.level}!`);
+    go(`#/ficha/${c.id}`);
+  },
+  coinAdd(el) { changeCoins(el.dataset.value, 1); },
+  coinSub(el) { changeCoins(el.dataset.value, -1); },
+  invPlus(el) { editInventory(el, (c, inv) => { inv.qty += 1; }); },
+  invMinus(el) { editInventory(el, (c, inv) => { inv.qty -= 1; }); },
+  invUse(el) {
+    editInventory(el, (c, inv, item) => {
+      inv.qty -= 1;
+      toast(inv.qty > 0 ? `${item.name}: restam ${inv.qty}.` : `${item.name}: acabou.`);
+    });
+  },
+  invRemove(el) {
+    editInventory(el, (c, inv, item) => {
+      if (confirm(`Tirar ${item.name} da mochila?`)) inv.qty = 0;
+    });
+  },
+  invAdd(el) {
+    state.addOpen = el.dataset.value;
+    updateChar(el.dataset.value, (c, rules) => {
+      const item = findItem(rules, document.getElementById('add-cat').value);
+      const qty = readInt('add-cat-qty', 1);
+      if (!item || qty < 1) return;
+      addItem(c, item.id, qty);
+      toast(`${item.name} adicionado.`);
+    });
+  },
+  invAddCustom(el) {
+    state.addOpen = el.dataset.value;
+    updateChar(el.dataset.value, (c) => {
+      const name = document.getElementById('add-name').value.trim();
+      if (!name) { toast('Dê um nome ao item.'); return false; }
+      const qty = Math.max(1, readInt('add-qty', 1));
+      const slots = Math.max(0, readInt('add-slots', 1));
+      const note = document.getElementById('add-note').value.trim();
+      c.inventory.push({ id: `item-${Date.now().toString(36)}`, custom: true, name, qty, slots, note });
+      toast(`${name} adicionado.`);
+      return true;
+    });
+  },
+
   gmGenerate() {
     const gm = state.gm;
     const rules = rulesFor(gm.books);
@@ -392,6 +541,56 @@ const actions = {
     go('#/');
   },
 };
+
+function readInt(id, fallback) {
+  const v = Number(document.getElementById(id)?.value);
+  return Number.isFinite(v) && v !== 0 ? Math.trunc(v) : fallback;
+}
+
+// Muda um personagem salvo direto da ficha. Se "fn" devolver false, nada é salvo.
+function updateChar(id, fn) {
+  const c = store.getCharacter(id);
+  if (!c) return;
+  if (fn(c, rulesFor(c.books || DEFAULT_BOOKS)) === false) return;
+  c.inventory = c.inventory.filter((i) => i.qty > 0);
+  if (!store.saveCharacter(c)) toast('Não foi possível salvar neste navegador.');
+}
+
+function editInventory(el, fn) {
+  updateChar(el.dataset.char, (c, rules) => {
+    const inv = c.inventory[Number(el.dataset.value)];
+    if (!inv) return false;
+    return fn(c, inv, itemOf(rules, inv));
+  });
+}
+
+function changeXp(id, sign) {
+  const amount = readInt('xp-amount', 0);
+  if (amount <= 0) { toast('Digite quanto XP ganhar ou perder.'); return; }
+  updateChar(id, (c) => {
+    c.xp = Math.max(0, (c.xp || 0) + sign * amount);
+    const need = xpNeeded(c.level);
+    toast(c.xp >= need && c.level < MAX_LEVEL ? `${c.xp} XP: já dá para subir de nível!` : `${c.xp} de ${need} XP.`);
+  });
+}
+
+function changeCoins(id, sign) {
+  const amount = readInt('coin-amount', 0);
+  const type = document.getElementById('coin-type').value;
+  const coin = COINS.find((k) => k.id === type);
+  if (amount <= 0 || !coin) { toast('Digite a quantidade de moedas.'); return; }
+  updateChar(id, (c) => {
+    const coins = { ...coinsOf(c) };
+    if (sign < 0 && (coins[type] || 0) < amount) {
+      toast(`Você só tem ${coins[type] || 0} ${coin.short}.`);
+      return false;
+    }
+    coins[type] = (coins[type] || 0) + sign * amount;
+    c.coins = coins;
+    toast(`${sign > 0 ? '+' : '−'}${amount} ${coin.short}`);
+    return true;
+  });
+}
 
 // Ações disparadas por caixas de seleção (evento "change").
 const changeActions = {
@@ -465,6 +664,15 @@ document.addEventListener('change', async (e) => {
     const key = el.dataset.gm;
     state.gm[key] = key === 'group' ? el.value : Number(el.value);
     render();
+    return;
+  }
+  if (el.dataset.invNote != null) {
+    updateChar(el.dataset.char, (c) => {
+      const inv = c.inventory[Number(el.dataset.invNote)];
+      if (!inv) return false;
+      inv.note = el.value.trim();
+      return true;
+    });
     return;
   }
   if (el.dataset.bind && state.char) {
