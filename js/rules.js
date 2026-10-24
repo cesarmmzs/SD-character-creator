@@ -74,6 +74,7 @@ export function newCharacter(books) {
     books: [...books],
     level: null,
     xp: 0,
+    hpCurrent: null, // null = PV cheio
     levels: {},
     stats: null,
     statRerolls: 0,
@@ -109,6 +110,13 @@ export const getClass = (rules, c) => (c.level >= 1 ? rules.classes.find((k) => 
 // ---------- Níveis ----------
 
 export const MAX_LEVEL = 10;
+
+// PV atual: começa cheio e nunca passa do máximo nem fica abaixo de 0.
+export function currentHp(c, maxHp) {
+  if (maxHp == null) return null;
+  if (c.hpCurrent == null) return maxHp;
+  return Math.max(0, Math.min(maxHp, c.hpCurrent));
+}
 export const TALENT_LEVELS = [1, 3, 5, 7, 9];
 // XP para passar do nível atual (nível 0 sobe para o 1 ao sobreviver, mas mostramos a mesma meta de 10).
 export const xpNeeded = (level) => Math.max(1, level || 0) * 10;

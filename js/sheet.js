@@ -1,7 +1,7 @@
 // Ficha de personagem pronta para jogar (tela e impressão).
 import { STATS, STAT_NAMES } from './data/glossary.js';
 import {
-  computeSheet, fmtMod, fmtMoney, fmtCoins, findItem, itemOf, rangeName, getClass, COINS, coinSlots, xpNeeded, MAX_LEVEL,
+  computeSheet, fmtMod, fmtMoney, fmtCoins, findItem, itemOf, rangeName, getClass, COINS, coinSlots, xpNeeded, MAX_LEVEL, currentHp,
 } from './rules.js';
 import { alignName } from './wizard.js';
 import { esc, help, helpText } from './ui.js';
@@ -32,6 +32,21 @@ function invSlots(item, inv) {
 }
 
 const catalogLabel = (item, cat) => `${item.name}${cat === 'gear' && item.buy > 1 ? ` (${item.buy})` : ''} · ${fmtMoney(item.cost)}`;
+
+function renderHp(c, max) {
+  if (max == null) return '';
+  const cur = currentHp(c, max);
+  return `<section class="panel hp-panel no-print"><h3>Pontos de vida ${help('pvAtual')}</h3>
+    <p class="hp-now"><span class="v-num">${cur}</span> <span class="muted">de ${max} PV máximo</span>${cur === 0 ? ' · <strong>caído!</strong>' : ''}</p>
+    <div class="xp-bar" role="progressbar" aria-label="PV atual" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${cur}"><span style="width:${Math.round((cur / max) * 100)}%"></span></div>
+    <div class="inline-form">
+      <input type="number" inputmode="numeric" id="hp-amount" min="1" placeholder="PV" aria-label="Quantidade de PV">
+      <button type="button" class="btn small" data-act="hpDamage" data-value="${esc(c.id)}">− Dano</button>
+      <button type="button" class="btn small" data-act="hpHeal" data-value="${esc(c.id)}">+ Cura</button>
+      <button type="button" class="btn small ghost" data-act="hpRest" data-value="${esc(c.id)}" ${cur === max ? 'disabled' : ''}>Descansar</button>
+    </div>
+  </section>`;
+}
 
 function renderXp(c) {
   const need = xpNeeded(c.level);
@@ -144,11 +159,11 @@ export function renderSheet(rules, c, { compact = false, interactive = false, ad
       ${c.player ? `<p class="muted small">Jogador: ${esc(c.player)}</p>` : ''}
     </header>
     <div class="vitals">
-      <div><span class="v-label">PV ${help('pv')}</span><span class="v-num">${s.hp ?? '–'}</span></div>
+      <div><span class="v-label">PV ${help('pv')}</span><span class="v-num">${s.hp == null ? '–' : interactive ? `${currentHp(c, s.hp)}<span class="v-max">/${s.hp}</span>` : s.hp}</span>${interactive && s.hp != null ? '<span class="small muted">atual / máximo</span>' : ''}</div>
       <div><span class="v-label">CA ${help('ca')}</span><span class="v-num">${s.ac.ac}</span><span class="small muted">${esc(s.ac.desc)}</span></div>
       <div><span class="v-label">Nível</span><span class="v-num">${c.level}</span><span class="small muted">XP ${c.xp || 0} / ${xpNeeded(c.level)}</span></div>
     </div>
-    ${interactive ? renderXp(c) : ''}
+    ${interactive ? renderHp(c, s.hp) + renderXp(c) : ''}
     <div class="stats-grid">${stats}</div>
     <section><h3>Ataques ${help('ataques')}</h3>${attacks}</section>
     ${spells}

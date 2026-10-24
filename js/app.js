@@ -3,7 +3,7 @@ import { loadRules, DEFAULT_BOOKS, BOOKS } from './data/index.js';
 import {
   newCharacter, rollStats, rollDice, roll, getClass, findItem, itemOf, addItem, removeItem, buyQty, applyQuickPack, applyKit,
   splitMoney, coinsOf, COINS, xpNeeded, nextLevel, levelUpError, talentSlots, hpSteps, spellStatus, computeSheet, titleFor,
-  MAX_LEVEL, fmtMod,
+  MAX_LEVEL, fmtMod, currentHp,
 } from './rules.js';
 import * as R from './random.js';
 import { STEPS, visibleSteps, renderTalentSlot, renderSpellPicker, bookToggle } from './wizard.js';
@@ -429,6 +429,11 @@ const actions = {
   exportAll() { store.downloadJSON('personagens-shadowdark.json', { app: 'sd-character-creator', characters: store.listCharacters() }); },
 
   // ----- Ficha: XP, subir de nível, moedas e mochila -----
+  hpDamage(el) { changeHp(el.dataset.value, -1); },
+  hpHeal(el) { changeHp(el.dataset.value, 1); },
+  hpRest(el) {
+    updateChar(el.dataset.value, (c) => { c.hpCurrent = null; toast('Descansou: PV cheio.'); });
+  },
   xpAdd(el) { changeXp(el.dataset.value, 1); },
   xpSub(el) { changeXp(el.dataset.value, -1); },
   levelUp(el) {
@@ -561,6 +566,19 @@ function editInventory(el, fn) {
     const inv = c.inventory[Number(el.dataset.value)];
     if (!inv) return false;
     return fn(c, inv, itemOf(rules, inv));
+  });
+}
+
+function changeHp(id, sign) {
+  const amount = readInt('hp-amount', 0);
+  if (amount <= 0) { toast('Digite quantos PV perder ou recuperar.'); return; }
+  updateChar(id, (c, rules) => {
+    const max = computeSheet(rules, c).hp;
+    if (max == null) return false;
+    const now = Math.max(0, Math.min(max, currentHp(c, max) + sign * amount));
+    c.hpCurrent = now >= max ? null : now;
+    toast(now === 0 ? 'PV chegou a 0: o personagem caiu!' : `${now} de ${max} PV.`);
+    return true;
   });
 }
 
