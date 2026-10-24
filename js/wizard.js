@@ -4,7 +4,7 @@ import { BOOKS } from './data/index.js';
 import {
   modifier, fmtMod, fmtMoney, canRerollStats, getClass, getAncestry, entryFor, effectNeeds, rollSubSlots,
   talentSlots, slotComplete, spellOptions, spellStatus, canAddSpell, spellsError, languageGroups, fixedLanguages,
-  computeSheet, weaponAllowed, armorAllowed, itemOf, hpSteps, hpRollsNeeded, buyQty, rangeName,
+  computeSheet, weaponAllowed, armorAllowed, itemOf, hpSteps, hpRollsNeeded, buyQty, rangeName, carryClass,
 } from './rules.js';
 import * as R from './random.js';
 import { icon } from './icons.js';
@@ -470,7 +470,7 @@ export const STEPS = [
     random: (rules, c) => R.randomEquipment(rules, c),
     render(c, rules) {
       const sheet = computeSheet(rules, c);
-      const bar = `<div class="carry ${sheet.used > sheet.capacity ? 'over' : ''}">Espaços: <strong>${sheet.used} / ${sheet.capacity}</strong> ${help('espacos')}${c.level >= 1 && c.gold != null && c.equipMode !== 'level0' ? ` · Dinheiro: <strong>${fmtMoney(c.gold)}</strong>` : ''} · CA ${sheet.ac.ac} ${help('ca')}</div>`;
+      const bar = `<div class="carry ${carryClass(sheet)}">Espaços: <strong>${sheet.used} / ${sheet.capacity}</strong> ${help('espacos')}${c.level >= 1 && c.gold != null && c.equipMode !== 'level0' ? ` · Dinheiro: <strong>${fmtMoney(c.gold)}</strong>` : ''} · CA ${sheet.ac.ac} ${help('ca')}</div>`;
       const inv = renderInventory(rules, c);
       if (c.level === 0) {
         return `${stepHeader('Equipamento', 'equipNivel0', 'Role 1d4 para saber quantos itens você tem, e 1d12 para cada um.')}

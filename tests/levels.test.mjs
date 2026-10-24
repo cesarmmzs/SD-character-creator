@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { loadRules } from '../js/data/index.js';
 import {
   computeSheet, talentSlots, slotComplete, spellStatus, spellsError, levelUpError, nextLevel, hpSteps,
-  coinSlots, coinsOf, slotsUsed, titleFor, getClass, MAX_LEVEL, stowItem, addItem, newCharacter,
+  coinSlots, coinsOf, slotsUsed, titleFor, getClass, MAX_LEVEL, stowItem, addItem, newCharacter, carryError, carryClass,
 } from '../js/rules.js';
 import { randomCharacter, randomLevelChoices } from '../js/random.js';
 
@@ -175,4 +175,21 @@ test('guardar deixa uma unidade na cidade: sem espaço, ataque ou CA', () => {
   assert.ok(!s.attacks.some((a) => a.name === wname));
   assert.ok(s.ac.ac <= armed.ac.ac);
   assert.equal(s.ac.desc, 'Sem armadura');
+});
+
+test('mochila cheia não aceita mais itens; cor do PV segue a porcentagem', async () => {
+  const { hpLevel } = await import('../js/sheet.js');
+  const c = newCharacter(['base']);
+  c.classId = 'guerreiro'; c.level = 1; c.stats = { FOR: 10, DES: 10, CON: 10, INT: 10, SAB: 10, CAR: 10 };
+  c.inventory.push({ id: 'item-a', custom: true, name: 'Baú', qty: 1, slots: 9 });
+  assert.equal(carryError(rules, c, (t) => addItem(t, 'tocha', 1)), null, 'o 10º espaço cabe');
+  addItem(c, 'tocha', 1);
+  assert.equal(carryClass(computeSheet(rules, c)), 'full');
+  assert.equal(carryError(rules, c, (t) => addItem(t, 'tocha', 1)), 'Sua mochila está cheia!');
+  c.inventory[0].qty = 0;
+  c.inventory = c.inventory.filter((i) => i.qty);
+  assert.match(carryError(rules, c, (t) => t.inventory.push({ id: 'x', custom: true, name: 'Pedra', qty: 1, slots: 20 })), /^Não cabe/);
+  {
+    assert.deepEqual([10, 7, 6.9, 5, 4.9, 2, 1.9, 0].map((v) => hpLevel(v, 10)), ['hp-green', 'hp-green', 'hp-yellow', 'hp-yellow', 'hp-orange', 'hp-orange', 'hp-red', 'hp-red']);
+  }
 });

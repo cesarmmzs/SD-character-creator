@@ -1,7 +1,7 @@
 // Ficha de personagem pronta para jogar (tela e impressão).
 import { STATS, STAT_NAMES } from './data/glossary.js';
 import {
-  computeSheet, fmtMod, fmtMoney, fmtCoins, findItem, itemOf, rangeName, getClass, COINS, coinSlots, xpNeeded, MAX_LEVEL, currentHp,
+  computeSheet, fmtMod, fmtMoney, fmtCoins, findItem, itemOf, rangeName, getClass, COINS, coinSlots, xpNeeded, MAX_LEVEL, currentHp, carryClass,
 } from './rules.js';
 import { alignName } from './wizard.js';
 import { esc, help, helpText } from './ui.js';
@@ -33,12 +33,21 @@ function invSlots(item, inv) {
 
 const catalogLabel = (item, cat) => `${item.name}${cat === 'gear' && item.buy > 1 ? ` (${item.buy})` : ''} · ${fmtMoney(item.cost)}`;
 
+// Cor da barra de PV: verde de 70% para cima, amarelo abaixo de 70%, laranja abaixo de 50%, vermelho abaixo de 20%.
+export function hpLevel(cur, max) {
+  const pct = max > 0 ? (cur / max) * 100 : 0;
+  if (pct < 20) return 'hp-red';
+  if (pct < 50) return 'hp-orange';
+  if (pct < 70) return 'hp-yellow';
+  return 'hp-green';
+}
+
 function renderHp(c, max) {
   if (max == null) return '';
   const cur = currentHp(c, max);
   return `<section class="panel hp-panel no-print"><h3>Pontos de vida ${help('pvAtual')}</h3>
     <p class="hp-now"><span class="v-num">${cur}</span> <span class="muted">de ${max} PV máximo</span>${cur === 0 ? ' · <strong>caído!</strong>' : ''}</p>
-    <div class="xp-bar" role="progressbar" aria-label="PV atual" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${cur}"><span style="width:${Math.round((cur / max) * 100)}%"></span></div>
+    <div class="xp-bar hp-bar ${hpLevel(cur, max)}" role="progressbar" aria-label="PV atual" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${cur}"><span style="width:${Math.round((cur / max) * 100)}%"></span></div>
     <div class="inline-form">
       <input type="number" inputmode="numeric" id="hp-amount" min="1" placeholder="PV" aria-label="Quantidade de PV">
       <button type="button" class="btn small" data-act="hpDamage" data-value="${esc(c.id)}">− Dano</button>
@@ -90,7 +99,7 @@ function renderBackpack(rules, c, s, addOpen) {
   const cslots = coinSlots(coins);
   return `<section class="backpack">
     <h3>Mochila ${help('mochila')}</h3>
-    <div class="carry ${s.used > s.capacity ? 'over' : ''}">Espaços: <strong>${s.used} / ${s.capacity}</strong> ${help('espacos')}${cslots ? ` <span class="small">(moedas: ${cslots})</span>` : ''}</div>
+    <div class="carry ${carryClass(s)}">Espaços: <strong>${s.used} / ${s.capacity}</strong> ${help('espacos')}${cslots ? ` <span class="small">(moedas: ${cslots})</span>` : ''}</div>
     <h4>Moedas ${help('moedas')}</h4>
     <div class="coins">${coinTiles}</div>
     <div class="inline-form no-print">
