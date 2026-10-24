@@ -1,5 +1,10 @@
 // Livro de Regras base. Textos resumidos com palavras próprias; consulte a página indicada para a regra completa.
 // Custos em peças de cobre (PC): 1 PO = 100 PC, 1 PP = 10 PC.
+import { MAGO_SUPERIORES, SACERDOTE_SUPERIORES } from './magias-base.js';
+
+// Magias conhecidas por grau, do nível 1 ao 10, conforme a tabela de cada classe.
+export const WIZARD_SPELLS = [[3], [4], [4, 1], [4, 2], [4, 2, 1], [4, 3, 2], [4, 3, 2, 1], [4, 4, 2, 2], [4, 4, 3, 2, 1], [4, 4, 4, 2, 2]];
+const PRIEST_SPELLS = [[2], [3], [3, 1], [3, 2], [3, 2, 1], [3, 2, 2], [3, 3, 2, 1], [3, 3, 2, 2], [3, 3, 2, 2, 1], [3, 3, 3, 2, 2]];
 
 export default {
   id: 'base',
@@ -104,7 +109,7 @@ export default {
         { name: 'Conjuração', desc: 'Conjura magias de mago com teste de 1d20 + modificador de Inteligência. Conhece 3 magias de grau 1.' },
         { name: 'Aprender Magias', desc: 'Pode aprender uma magia de um pergaminho estudando um dia e passando num teste de Inteligência CD 15. O pergaminho é gasto.' },
       ],
-      spellcasting: { list: 'mago', stat: 'INT', known: 3 },
+      spellcasting: { list: 'mago', stat: 'INT', known: 3, byLevel: WIZARD_SPELLS },
       talents: 'mago',
       titles: {
         lawful: ['Aprendiz', 'Conjurador', 'Arcanista', 'Magista', 'Arquimago'],
@@ -125,7 +130,7 @@ export default {
         { name: 'Expulsar Mortos-vivos', desc: 'Conhece essa magia de graça, sem contar no limite de magias.' },
       ],
       requiresDeity: 'sameAlignment',
-      spellcasting: { list: 'sacerdote', stat: 'SAB', known: 2, bonusSpells: ['expulsar-mortos-vivos'] },
+      spellcasting: { list: 'sacerdote', stat: 'SAB', known: 2, byLevel: PRIEST_SPELLS, bonusSpells: ['expulsar-mortos-vivos'] },
       talents: 'sacerdote',
       titles: {
         lawful: ['Acólito', 'Cruzado', 'Templário', 'Campeão', 'Paladino'],
@@ -282,6 +287,7 @@ export default {
       { id: 'protecao-mal', name: 'Proteção Contra o Mal', tier: 1, desc: 'Seres caóticos têm Desvantagem para atacar o alvo e não podem possuí-lo ou encantá-lo, enquanto você se concentra.' },
       { id: 'queda-suave', name: 'Queda Suave', tier: 1, desc: 'Conjurada enquanto cai: você desce devagar e pousa em segurança.' },
       { id: 'sono', name: 'Sono', tier: 1, desc: 'Criaturas vivas de nível 2 ou menor numa área Perto caem num sono profundo.' },
+      ...MAGO_SUPERIORES,
     ],
     sacerdote: [
       { id: 'arma-sagrada', name: 'Arma Sagrada', tier: 1, desc: 'Uma arma tocada fica mágica, com +1 em ataque e dano por 5 rodadas.' },
@@ -290,6 +296,7 @@ export default {
       { id: 'expulsar-mortos-vivos', name: 'Expulsar Mortos-vivos', tier: 1, desc: 'Mortos-vivos por perto testam Carisma contra sua conjuração: fogem, ou são destruídos se falharem por muito.', free: true },
       { id: 'luz', name: 'Luz', tier: 1, desc: 'Um objeto tocado brilha até a distância Perto por 1 hora de tempo real.' },
       { id: 'protecao-mal', name: 'Proteção Contra o Mal', tier: 1, desc: 'Seres caóticos têm Desvantagem para atacar o alvo e não podem possuí-lo ou encantá-lo, enquanto você se concentra.' },
+      ...SACERDOTE_SUPERIORES,
     ],
   },
 

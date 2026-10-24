@@ -167,4 +167,29 @@ export const GLOSSARY = {
     text: 'Gera vários personagens aleatórios de uma vez, seguindo as tabelas de personagem aleatório do livro. Útil para a Provação de nível 0 (o livro sugere quatro por jogador) ou para criar PdMs e substitutos rapidamente.',
     page: 118,
   },
+  xp: {
+    title: 'Experiência (XP)',
+    text: 'O mestre dá XP principalmente pelos tesouros que o grupo recupera. Quando seu XP chega ao seu nível × 10 (10 XP no nível 1, 20 no nível 2...), você sobe de nível e o XP volta a zero. Anote aqui o XP que o mestre der.',
+    page: 39,
+  },
+  subirNivel: {
+    title: 'Subir de nível',
+    text: 'Ao subir, você rola o dado de vida da classe e soma ao seu PV máximo (a Constituição só conta no nível 1). Nos níveis 3, 5, 7 e 9 você ganha uma rolagem de talento. Conjuradores aprendem magias novas conforme a tabela da classe, e seu título pode mudar. O app mostra só o que muda no novo nível.',
+    page: 39,
+  },
+  nivelZeroUm: {
+    title: 'Do nível 0 ao nível 1',
+    text: 'Quem sobrevive à primeira aventura vira aventureiro: escolhe uma classe, rola o dado de vida da classe (somando a Constituição), rola um talento e, se for conjurador, escolhe as magias. Você mantém seus atributos, ancestralidade e os itens que já tem.',
+    page: 39,
+  },
+  moedas: {
+    title: 'Moedas',
+    text: 'Há três moedas: ouro (PO), prata (PP) e cobre (PC). 1 PO vale 10 PP, e 1 PP vale 10 PC. As 100 primeiras moedas que você carrega não ocupam espaço; depois disso, cada 100 moedas ocupam 1 espaço.',
+    page: 35,
+  },
+  mochila: {
+    title: 'Mochila',
+    text: 'Tudo o que você carrega. Use "−" e "+" para ajustar a quantidade, "usar" para gastar uma unidade (uma tocha, uma ração, uma flecha) e "×" para tirar o item. Você pode adicionar itens dos livros ou criar um item próprio, como um tesouro encontrado. Cada item ocupa espaços; seu limite é a Força ou 10, o que for maior.',
+    page: 35,
+  },
 };

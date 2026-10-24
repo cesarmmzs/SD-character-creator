@@ -2,6 +2,12 @@
 
 const pick = { min: 12, max: 12, text: 'Escolha um talento desta tabela ou distribua +2 pontos de atributo', effect: { kind: 'pick' } };
 
+import { WIZARD_SPELLS } from './base.js';
+import { BRUXA_SUPERIORES } from './magias-suplementos.js';
+
+// O Cavaleiro de São Ydris só aprende magias a partir do nível 3, até o grau 3, conforme a tabela da classe.
+const YDRIS_SPELLS = [[], [], [1], [2], [3], [3, 1], [3, 2], [3, 3], [3, 3, 1], [3, 3, 2]];
+
 const witchCasting = { list: 'bruxa', stat: 'CAR' };
 
 export default {
@@ -21,7 +27,7 @@ export default {
         { name: 'Conjuração', desc: 'Conjura magias de bruxa com 1d20 + modificador de Carisma, CD 10 + grau. Se falhar, não pode repetir a magia até descansar. Um 1 natural rola na tabela de Falhas Diabólicas. Conhece 3 magias de grau 1.' },
       ],
       choices: [{ id: 'familiar', label: 'Seu familiar (animal e nome)', type: 'text', optional: true, placeholder: 'Ex.: corvo chamado Fuligem' }],
-      spellcasting: { ...witchCasting, known: 3 },
+      spellcasting: { ...witchCasting, known: 3, byLevel: WIZARD_SPELLS },
       talents: 'bruxa',
       titles: {
         lawful: ['Vidente', 'Adivinha', 'Profeta', 'A Sábia', 'Baba'],
@@ -39,7 +45,7 @@ export default {
         { name: 'Possessão Demoníaca', desc: '3 vezes por dia, +1 no dano por 3 rodadas, mais metade do seu nível.' },
         { name: 'Conjuração', desc: 'Usa magias de bruxa com Carisma, mas só aprende a primeira no nível 3.' },
       ],
-      spellcasting: { ...witchCasting, known: 0 },
+      spellcasting: { ...witchCasting, known: 0, byLevel: YDRIS_SPELLS },
       talents: 'ydris',
       titles: {
         lawful: ['Árbitro', 'Executor', 'Cavaleiro Marechal', 'Juiz', 'Justiceiro'],
@@ -195,6 +201,7 @@ export default {
       { id: 'luz-bruxa', name: 'Luz de Bruxa', tier: 1, desc: 'Um fogo-fátuo flutuante ilumina ao redor dele e se move sob seu comando enquanto você se concentra.' },
       { id: 'mau-olhado', name: 'Mau Olhado', tier: 1, desc: 'O alvo sofre 1d4 de dano e não consegue ver você até o fim do próximo turno dele.' },
       { id: 'nevoa', name: 'Névoa', tier: 1, desc: 'Uma névoa densa envolve você e se move junto; ataques contra quem está nela têm Desvantagem.' },
+      ...BRUXA_SUPERIORES,
     ],
   },
 };

@@ -12,8 +12,10 @@ Ferramenta de fã, não oficial. Shadowdark RPG é da The Arcane Library. Os tex
 - Talentos aplicados automaticamente, incluindo os casos de escolha (resultado 12, Dádivas Patronais, Lótus Negra).
 - Equipamento por **pacote rápido** ou por **compras** com o ouro rolado, controlando dinheiro e espaços.
 - Ficha final pronta para jogar, com opção de imprimir.
+- **Subir de nível** direto da ficha (até o nível 10): controle de XP, dado de vida, talentos nos níveis 3, 5, 7 e 9, magias novas por grau e título atualizado. Personagens de nível 0 viram nível 1 escolhendo a classe e mantendo os itens.
+- **Mochila** na ficha: moedas de ouro, prata e cobre separadas (adicionar e remover), itens com quantidade, "usar", anotações, itens dos livros ou criados pelo jogador, e contagem de espaços.
 - Personagens salvos no próprio navegador, com exportar/importar em `.json`.
-- **Modo mestre**: gera vários personagens aleatórios de uma vez (por exemplo, para A Provação) e salva todos num grupo.
+- **Modo mestre**: gera vários personagens aleatórios de uma vez, do nível 0 ao 10 (por exemplo, para A Provação) e salva todos num grupo.
 - Funciona sem internet depois da primeira visita.
 
 ## Como rodar localmente

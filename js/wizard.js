@@ -3,8 +3,8 @@ import { STATS, STAT_NAMES, ALIGNMENTS, GLOSSARY } from './data/glossary.js';
 import { BOOKS } from './data/index.js';
 import {
   modifier, fmtMod, fmtMoney, canRerollStats, getClass, getAncestry, entryFor, effectNeeds, rollSubSlots,
-  talentSlots, slotComplete, spellOptions, spellsAllowed, languageGroups, fixedLanguages, computeSheet,
-  weaponAllowed, armorAllowed, findItem, hpRollsNeeded, buyQty, rangeName,
+  talentSlots, slotComplete, spellOptions, spellStatus, canAddSpell, spellsError, languageGroups, fixedLanguages,
+  computeSheet, weaponAllowed, armorAllowed, itemOf, hpSteps, hpRollsNeeded, buyQty, rangeName,
 } from './rules.js';
 import * as R from './random.js';
 import { esc, help, helpText, select, diceInput, getAt } from './ui.js';
@@ -106,7 +106,7 @@ function renderChoice(rules, c, effect, path, tableId) {
   }
 }
 
-function renderSlot(rules, c, path, tableId, label, nested = false) {
+export function renderSlot(rules, c, path, tableId, label, nested = false) {
   const table = rules.tables[tableId];
   if (!table) return '';
   const slot = getAt(c, path) || {};
@@ -123,6 +123,43 @@ function renderSlot(rules, c, path, tableId, label, nested = false) {
   </div>`;
 }
 
+// Talento de um nível; o Profanador escolhe antes entre a tabela da classe e a do patrono.
+export function renderTalentSlot(rules, c, s) {
+  const cls = getClass(rules, c);
+  let chooser = '';
+  if (s.key.startsWith('lvl') && cls?.patronBoonAtLevel1 && c.patron) {
+    const n = s.level;
+    const usePatron = c.levels?.[n]?.talentTable === 'patron';
+    const rolled = c.talents[s.key]?.roll != null;
+    chooser = `<div class="chips">${[['class', `Tabela de ${cls.name}`], ['patron', 'Dádiva do patrono']].map(([v, l]) => `<button type="button" class="chip${(v === 'patron') === usePatron ? ' on' : ''}" data-act="talentTable" data-level="${n}" data-value="${v}" ${rolled ? 'disabled' : ''}>${esc(l)}</button>`).join('')}</div>
+      ${rolled ? '' : '<p class="muted small">Como Profanador, você pode rolar na tabela do seu patrono em vez da tabela da classe.</p>'}`;
+  }
+  return chooser + renderSlot(rules, c, `talents.${s.key}`, s.table, s.label);
+}
+
+// Escolha de magias por grau. "locked" são magias que o personagem já conhecia (não podem ser desmarcadas).
+export function renderSpellPicker(rules, c, locked = []) {
+  const cls = getClass(rules, c);
+  const st = spellStatus(rules, c);
+  const free = (cls.spellcasting.bonusSpells || []).map((id) => rules.spells[cls.spellcasting.list].find((x) => x.id === id)).filter(Boolean);
+  const tiers = st.tiers.map((need, i) => {
+    const tier = i + 1;
+    const left = need - st.counts[i];
+    const open = left > 0 || st.extraUsed < st.extra;
+    return `<details class="panel spell-tier"${open ? ' open' : ''}><summary><strong>Grau ${tier}</strong> · ${st.counts[i]} de ${need}${left > 0 ? ` <span class="badge">falta${left > 1 ? 'm' : ''} ${left}</span>` : ' ✓'}</summary>
+      <div class="spell-list">${spellOptions(rules, c, tier).map((sp) => {
+        const on = c.spells.includes(sp.id);
+        const isLocked = on && locked.includes(sp.id);
+        const blocked = !on && !canAddSpell(st, tier);
+        return `<label class="check spell${blocked ? ' off' : ''}"><input type="checkbox" data-act="toggleSpell" value="${sp.id}" data-max="${st.total}" ${on ? 'checked' : ''} ${blocked || isLocked ? 'disabled' : ''}>
+          <span><strong>${esc(sp.name)}</strong>${isLocked ? ' <span class="muted small">(já conhecida)</span>' : ''}${sp.dur ? ` <span class="muted small">${esc(sp.dur)} · ${esc(rangeName(sp.alc))}</span>` : ''}<br><span class="small">${esc(sp.desc)}</span></span></label>`;
+      }).join('')}</div></details>`;
+  }).join('');
+  return `${free.length ? `<p>Você também conhece, de graça: <strong>${free.map((x) => esc(x.name)).join(', ')}</strong> ${helpText(free[0].name, free[0].desc)}</p>` : ''}
+    ${st.extra ? `<p class="callout">Um talento lhe dá <strong>${st.extra}</strong> magia${st.extra > 1 ? 's' : ''} a mais, de qualquer grau que você já conheça (${st.extraUsed} usada${st.extraUsed === 1 ? '' : 's'}).</p>` : ''}
+    ${tiers}`;
+}
+
 // ---------- Etapas ----------
 
 export const STEPS = [
@@ -130,19 +167,20 @@ export const STEPS = [
     id: 'inicio',
     title: 'Começo',
     render(c) {
+      const fixedLevel = c.level >= 2 || c.promoted;
       return `${stepHeader('Vamos começar', null, 'Responda duas perguntas rápidas. Tudo o que der para calcular, o app calcula para você.')}
-        <h3>Em que nível você começa? ${help('nivel')}</h3>
-        <div class="cards two">
+        <h3>Nível ${help('nivel')}</h3>
+        ${fixedLevel ? `<p class="callout">Personagem de nível ${c.level}. Para mudar de nível, use o botão "Subir de nível" na ficha.</p>` : `<div class="cards two">
           ${card({ path: 'level', value: 0, selected: c.level === 0, title: 'Nível 0', body: '<span>Gente comum tentando sobreviver à primeira aventura. Sem classe, poucos PV. Comum em "A Provação".</span>' })}
           ${card({ path: 'level', value: 1, selected: c.level === 1, title: 'Nível 1', body: '<span>Aventureiro pronto, com classe, talentos e mais vida.</span>' })}
-        </div>
+        </div>`}
         <h3>Livros da sua mesa ${help('livros')}</h3>
         <div class="toggles">
           ${BOOKS.map((b) => `<label class="toggle"><input type="checkbox" data-act="toggleBook" value="${b.id}" ${c.books.includes(b.id) ? 'checked' : ''} ${b.required ? 'disabled' : ''}> ${esc(b.name)}</label>`).join('')}
         </div>
         <div class="callout">
           <p><strong>Com pressa?</strong> Gere um personagem inteiro de uma vez e ajuste depois, se quiser.</p>
-          <button type="button" class="btn" data-act="randomAll" ${c.level == null ? 'disabled' : ''}>🎲 Sortear personagem completo</button>
+          <button type="button" class="btn" data-act="randomAll" ${c.level == null || fixedLevel ? 'disabled' : ''}>🎲 Sortear personagem completo</button>
         </div>`;
     },
     validate: (c) => (c.level == null ? 'Escolha o nível inicial.' : null),
@@ -172,11 +210,13 @@ export const STEPS = [
   {
     id: 'classe',
     title: 'Classe',
-    visible: (c) => c.level === 1,
+    visible: (c) => c.level >= 1,
     random: (rules, c) => { R.randomClass(rules, c); R.randomClassChoices(rules, c); },
     render(c, rules) {
       const cls = getClass(rules, c);
-      const cards = rules.classes.map((k) => card({
+      // Depois do nível 1 a classe fica fixa: trocar desfaria talentos, magias e PV de todos os níveis.
+      const locked = c.level >= 2;
+      const cards = rules.classes.filter((k) => !locked || k.id === c.classId).map((k) => card({
         path: 'classId', value: k.id, selected: c.classId === k.id, title: k.name, badge: bookBadge(k),
         body: `<span>${esc(k.desc)}</span><span class="facts">Vida: d${k.hitDie} · Armas: ${esc(k.weaponsText)} · Armaduras: ${esc(k.armorText)}</span>`,
       })).join('');
@@ -193,7 +233,7 @@ export const STEPS = [
           }).join('')}</div>`;
       }
       return `${stepHeader('Classe', 'classe', 'Sua classe é seu papel no grupo. Toque numa opção para ver os detalhes.')}
-        ${randomBtn()}<div class="cards">${cards}</div>${choices}`;
+        ${locked ? `<p class="callout">No nível ${c.level} a classe não pode mais ser trocada.</p>` : randomBtn()}<div class="cards">${cards}</div>${choices}`;
     },
     validate(c, rules) {
       const cls = getClass(rules, c);
@@ -314,12 +354,12 @@ export const STEPS = [
   {
     id: 'talentos',
     title: 'Talentos',
-    visible: (c) => c.level === 1,
+    visible: (c) => c.level >= 1,
     random: (rules, c) => R.randomTalents(rules, c),
     render(c, rules) {
       const slots = talentSlots(rules, c);
       return `${stepHeader('Talentos', 'talentos', 'Role na tabela da sua classe. Quando o resultado pedir uma escolha, ela aparece logo abaixo.')}${randomBtn('Rolar tudo para mim')}
-        ${slots.map((s) => renderSlot(rules, c, `talents.${s.key}`, s.table, s.label)).join('')}
+        ${slots.map((s) => renderTalentSlot(rules, c, s)).join('')}
         ${slots.some((s) => s.key === 'patron0') || !getClass(rules, c)?.patronBoonAtLevel1 ? '' : '<p class="callout">Escolha seu patrono na etapa Divindade para rolar a Dádiva Patronal.</p>'}`;
     },
     validate(c, rules) {
@@ -336,27 +376,20 @@ export const STEPS = [
     random: (rules, c) => R.randomSpells(rules, c),
     render(c, rules) {
       const cls = getClass(rules, c);
-      const n = spellsAllowed(rules, c);
-      const free = (cls.spellcasting.bonusSpells || []).map((id) => rules.spells[cls.spellcasting.list].find((s) => s.id === id)).filter(Boolean);
-      if (n === 0) {
+      const st = spellStatus(rules, c);
+      if (st.total === 0) {
         return `${stepHeader('Magias', 'magias')}<p class="callout">${esc(cls.name)} só aprende a primeira magia no nível 3. Nada para escolher agora.</p>`;
       }
       const sheet = computeSheet(rules, c);
-      return `${stepHeader('Magias', 'magias', `Escolha <strong>${n}</strong> magia${n > 1 ? 's' : ''} de grau 1. Seu teste de conjuração é 1d20 ${fmtMod(sheet.casting.bonus)} ${help('conjuracao')}.`)}
+      const intro = st.maxTier === 1
+        ? `Escolha <strong>${st.total}</strong> magia${st.total > 1 ? 's' : ''} de grau 1.`
+        : `No nível ${c.level}, você conhece <strong>${st.total}</strong> magias, separadas por grau.`;
+      return `${stepHeader('Magias', 'magias', `${intro} Seu teste de conjuração é 1d20 ${fmtMod(sheet.casting.bonus)} ${help('conjuracao')}.`)}
         ${randomBtn()}
-        ${free.length ? `<p>Você também conhece, de graça: <strong>${free.map((s) => esc(s.name)).join(', ')}</strong> ${helpText(free[0].name, free[0].desc)}</p>` : ''}
-        <div class="spell-list">${spellOptions(rules, c).map((sp) => {
-          const on = c.spells.includes(sp.id);
-          const blocked = !on && c.spells.length >= n;
-          return `<label class="check spell${blocked ? ' off' : ''}"><input type="checkbox" data-act="toggleSpell" value="${sp.id}" data-max="${n}" ${on ? 'checked' : ''} ${blocked ? 'disabled' : ''}>
-            <span><strong>${esc(sp.name)}</strong><br><span class="small">${esc(sp.desc)}</span></span></label>`;
-        }).join('')}</div>
-        <p class="muted small">${c.spells.length} de ${n} escolhidas.</p>`;
+        ${renderSpellPicker(rules, c)}
+        <p class="muted small">${c.spells.length} de ${st.total} escolhidas.</p>`;
     },
-    validate(c, rules) {
-      const n = spellsAllowed(rules, c);
-      return c.spells.length < n ? `Escolha ${n} magia${n > 1 ? 's' : ''}.` : null;
-    },
+    validate: (c, rules) => spellsError(rules, c),
   },
   {
     id: 'vida',
@@ -371,23 +404,25 @@ export const STEPS = [
           <p>No nível 0, seus PV são o modificador de Constituição (${fmtMod(sheet.mods.CON)}), com mínimo de 1${dwarf ? ', mais 2 por ser anão' : ''}. Nada para rolar.</p>`;
       }
       const cls = sheet.cls;
-      const n = hpRollsNeeded(rules, c, sheet.bonus);
+      const step = hpSteps(rules, c)[0];
+      const n = step.count;
       const rolls = c.hp?.rolls || [];
       const rows = Array.from({ length: n }, (_, i) => {
-        const maxed = i < sheet.bonus.maxHp;
+        const maxed = i < step.maxed;
         return `<div class="slot"><strong>${i === 0 ? 'Dado de vida' : 'Dado extra (Lótus Negra)'}: d${cls.hitDie}</strong>
           ${maxed ? `<p>Um talento faz este dado valer o máximo: <strong>${cls.hitDie}</strong>.</p>` : diceInput('rollHp', `hp.rolls.${i}`, { label: 'Dado de vida', dice: `1d${cls.hitDie}${dwarf ? ' com Vantagem' : ''}`, value: rolls[i] })}</div>`;
       }).join('');
       return `${stepHeader('Pontos de vida', 'pv', `Role o dado de vida de ${esc(cls.name)} e some sua Constituição (${fmtMod(sheet.mods.CON)}). Mínimo de 1.${dwarf ? ' Anões rolam com Vantagem e ganham +2.' : ''}`)}
         ${rows}
+        ${c.level >= 2 ? `<p class="muted small">Os dados de vida dos níveis 2 a ${c.level} já estão guardados e entram no total.</p>` : ''}
         ${sheet.hp != null ? `<div class="big-number">${sheet.hp} PV</div>` : ''}`;
     },
     validate(c, rules) {
       if (c.level === 0) return null;
-      const sheet = computeSheet(rules, c);
-      const cls = sheet.cls;
-      const n = hpRollsNeeded(rules, c, sheet.bonus);
-      for (let i = sheet.bonus.maxHp; i < n; i++) {
+      const cls = getClass(rules, c);
+      const step = hpSteps(rules, c)[0];
+      const n = step.count;
+      for (let i = step.maxed; i < n; i++) {
         const r = c.hp?.rolls?.[i];
         if (!(r >= 1 && r <= cls.hitDie)) return `Role o dado de vida (1 a ${cls.hitDie}).`;
       }
@@ -400,7 +435,7 @@ export const STEPS = [
     random: (rules, c) => R.randomEquipment(rules, c),
     render(c, rules) {
       const sheet = computeSheet(rules, c);
-      const bar = `<div class="carry ${sheet.used > sheet.capacity ? 'over' : ''}">Espaços: <strong>${sheet.used} / ${sheet.capacity}</strong> ${help('espacos')}${c.level === 1 && c.gold != null ? ` · Dinheiro: <strong>${fmtMoney(c.gold)}</strong>` : ''} · CA ${sheet.ac.ac} ${help('ca')}</div>`;
+      const bar = `<div class="carry ${sheet.used > sheet.capacity ? 'over' : ''}">Espaços: <strong>${sheet.used} / ${sheet.capacity}</strong> ${help('espacos')}${c.level >= 1 && c.gold != null && c.equipMode !== 'level0' ? ` · Dinheiro: <strong>${fmtMoney(c.gold)}</strong>` : ''} · CA ${sheet.ac.ac} ${help('ca')}</div>`;
       const inv = renderInventory(rules, c);
       if (c.level === 0) {
         return `${stepHeader('Equipamento', 'equipNivel0', 'Role 1d4 para saber quantos itens você tem, e 1d12 para cada um.')}
@@ -412,7 +447,9 @@ export const STEPS = [
         ${card({ act: 'equipMode', path: 'equipMode', value: 'shop', selected: c.equipMode === 'shop', title: 'Fazer compras', body: '<span>Role 2d6 × 5 PO e compre o que quiser.</span>' })}
       </div>`;
       let body = '';
-      if (c.equipMode === 'quick') {
+      if (c.equipMode === 'level0') {
+        body = '<p class="callout">Você mantém os itens que já tinha no nível 0. Se preferir, troque pelo pacote rápido ou faça compras (isso substitui os itens atuais).</p>';
+      } else if (c.equipMode === 'quick') {
         body = `<p class="muted small">${help('pacote')} Você pode trocar por compras a qualquer momento.</p>`;
       } else if (c.equipMode === 'shop') {
         body = c.goldRoll == null
@@ -449,9 +486,9 @@ export const STEPS = [
 function renderInventory(rules, c) {
   if (!c.inventory.length) return '';
   return `<h3>Seus itens</h3><ul class="inventory">${c.inventory.map((inv) => {
-    const item = findItem(rules, inv.id);
+    const item = itemOf(rules, inv);
     if (!item) return '';
-    const removable = c.equipMode === 'shop' || c.level === 0;
+    const removable = c.equipMode === 'shop' || c.equipMode === 'level0' || item.cat === 'custom';
     return `<li><span>${esc(item.name)}${inv.qty > 1 ? ` × ${inv.qty}` : ''}</span>${removable ? `<button type="button" class="link" data-act="dropItem" data-value="${inv.id}">tirar</button>` : ''}</li>`;
   }).join('')}</ul>`;
 }
