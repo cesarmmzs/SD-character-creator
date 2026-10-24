@@ -147,7 +147,8 @@ th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--line
 /* Equipamento */
 .carry { position: sticky; top: 100px; z-index: 4; padding: 8px 12px; margin: 8px 0; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: .9rem; }
 .carry .help { background: transparent; color: var(--bg); border-color: var(--bg); }
-.carry.over { background: #fff; color: #000; outline: 2px dashed #fff; outline-offset: 2px; }
+.carry.full, .carry.over { border: 3px solid #e53935; }
+.carry.over { background: #fff; color: #000; outline: 2px dashed #e53935; outline-offset: 2px; }
 .carry.over .help { color: #000; border-color: #000; }
 .shop ul, .inventory, .char-list, .plain, .inv, .spells { list-style: none; padding: 0; margin: 0; }
 .shop details { margin: 10px 0; }
@@ -193,6 +194,13 @@ th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--line
 .level-panel h3 { margin-top: 0; }
 .xp-bar { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
 .xp-bar span { display: block; height: 100%; background: var(--accent); }
+/* PV: a cor acompanha quanto da vida resta. */
+.hp-bar { height: 14px; }
+.hp-bar span { transition: width .2s, background-color .2s; }
+.hp-bar.hp-green span { background: #43a047; }
+.hp-bar.hp-yellow span { background: #fdd835; }
+.hp-bar.hp-orange span { background: #fb8c00; }
+.hp-bar.hp-red span { background: #e53935; }
 .inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
 .inline-form input[type=number] { width: 96px; flex: none; }
 .inline-form select { width: auto; flex: 1 1 140px; }

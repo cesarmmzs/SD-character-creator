@@ -463,6 +463,20 @@ export function fixedLanguages(rules, c) {
   return [...new Set([...(getAncestry(rules, c)?.languages || []), ...(getClass(rules, c)?.languages || [])])];
 }
 
+// Estado da mochila para o visual: cheia (no limite) ou passando do limite.
+export const carryClass = (s) => (s.used > s.capacity ? 'over' : s.used >= s.capacity ? 'full' : '');
+
+// Impede pôr na mochila o que não cabe. "change" é aplicada numa cópia; devolve a mensagem ou null.
+export function carryError(rules, c, change) {
+  const before = computeSheet(rules, c);
+  const test = structuredClone(c);
+  change(test);
+  const after = computeSheet(rules, test);
+  if (after.used <= after.capacity || after.used <= before.used) return null;
+  if (before.used >= before.capacity) return 'Sua mochila está cheia!';
+  return `Não cabe: a mochila ficaria com ${after.used} de ${after.capacity} espaços.`;
+}
+
 export function carryCapacity(rules, c, stats, mods) {
   const cls = getClass(rules, c);
   return Math.max(stats.FOR, 10) + (cls?.carrier && mods.CON > 0 ? mods.CON : 0);

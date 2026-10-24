@@ -3,7 +3,7 @@ import { loadRules, DEFAULT_BOOKS, BOOKS } from './data/index.js';
 import {
   newCharacter, rollStats, rollDice, roll, getClass, findItem, itemOf, addItem, removeItem, buyQty, applyQuickPack, applyKit,
   splitMoney, coinsOf, COINS, xpNeeded, nextLevel, levelUpError, talentSlots, hpSteps, spellStatus, computeSheet, titleFor,
-  MAX_LEVEL, fmtMod, currentHp, stowItem,
+  MAX_LEVEL, fmtMod, currentHp, stowItem, carryError,
 } from './rules.js';
 import * as R from './random.js';
 import { STEPS, visibleSteps, renderTalentSlot, renderSpellPicker, bookToggle, bookLocked } from './wizard.js';
@@ -336,6 +336,8 @@ const actions = {
     const c = state.char;
     const item = findItem(rulesFor(c.books), el.dataset.value);
     if (!item || c.gold < item.cost) return;
+    const full = carryError(rulesFor(c.books), c, (t) => addItem(t, item.id, buyQty(item)));
+    if (full) { toast(full); return; }
     c.gold -= item.cost;
     c.coins = null;
     addItem(c, item.id, buyQty(item));
@@ -499,7 +501,14 @@ const actions = {
   },
   coinAdd(el) { changeCoins(el.dataset.value, 1); },
   coinSub(el) { changeCoins(el.dataset.value, -1); },
-  invPlus(el) { editInventory(el, (c, inv) => { inv.qty += 1; }); },
+  invPlus(el) {
+    editInventory(el, (c, inv, item, rules) => {
+      const i = Number(el.dataset.value);
+      const full = carryError(rules, c, (t) => { t.inventory[i].qty += 1; });
+      if (full) { toast(full); return false; }
+      inv.qty += 1;
+    });
+  },
   invMinus(el) {
     const { inv, item } = invAt(el);
     if (!inv) return;
@@ -531,8 +540,11 @@ const actions = {
     });
   },
   invUnstow(el) {
-    editInventory(el, (c, inv, item) => {
-      if (!stowItem(c, Number(el.dataset.value), true)) return false;
+    editInventory(el, (c, inv, item, rules) => {
+      const i = Number(el.dataset.value);
+      const full = carryError(rules, c, (t) => stowItem(t, i, true));
+      if (full) { toast(full); return false; }
+      if (!stowItem(c, i, true)) return false;
       toast(`1 ${item.name} de volta à mão.`);
     });
   },
@@ -541,19 +553,23 @@ const actions = {
     updateChar(el.dataset.value, (c, rules) => {
       const item = findItem(rules, document.getElementById('add-cat').value);
       const qty = readInt('add-cat-qty', 1);
-      if (!item || qty < 1) return;
+      if (!item || qty < 1) return false;
+      const full = carryError(rules, c, (t) => addItem(t, item.id, qty));
+      if (full) { toast(full); return false; }
       addItem(c, item.id, qty);
       toast(`${item.name} adicionado.`);
     });
   },
   invAddCustom(el) {
     state.addOpen = el.dataset.value;
-    updateChar(el.dataset.value, (c) => {
+    updateChar(el.dataset.value, (c, rules) => {
       const name = document.getElementById('add-name').value.trim();
       if (!name) { toast('Dê um nome ao item.'); return false; }
       const qty = Math.max(1, readInt('add-qty', 1));
       const slots = Math.max(0, readInt('add-slots', 1));
       const note = document.getElementById('add-note').value.trim();
+      const full = carryError(rules, c, (t) => t.inventory.push({ id: 'teste', custom: true, name, qty, slots }));
+      if (full) { toast(full); return false; }
       c.inventory.push({ id: `item-${Date.now().toString(36)}`, custom: true, name, qty, slots, note });
       toast(`${name} adicionado.`);
       return true;
@@ -607,7 +623,7 @@ function editInventory(btn, fn) {
   updateChar(el.dataset.char, (c, rules) => {
     const inv = c.inventory[Number(el.dataset.value)];
     if (!inv) return false;
-    return fn(c, inv, itemOf(rules, inv));
+    return fn(c, inv, itemOf(rules, inv), rules);
   });
 }
 

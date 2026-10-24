@@ -1,5 +1,5 @@
 // Guarda os arquivos do app para funcionar sem internet.
-const CACHE = 'sdcc-v8';
+const CACHE = 'sdcc-v9';
 const FILES = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icon.svg',
   'js/app.js', 'js/rules.js', 'js/random.js', 'js/wizard.js', 'js/sheet.js', 'js/ui.js', 'js/storage.js',
