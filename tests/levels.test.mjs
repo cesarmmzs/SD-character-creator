@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { loadRules } from '../js/data/index.js';
 import {
   computeSheet, talentSlots, slotComplete, spellStatus, spellsError, levelUpError, nextLevel, hpSteps,
-  coinSlots, coinsOf, slotsUsed, titleFor, getClass, MAX_LEVEL,
+  coinSlots, coinsOf, slotsUsed, titleFor, getClass, MAX_LEVEL, stowItem, addItem, newCharacter,
 } from '../js/rules.js';
 import { randomCharacter, randomLevelChoices } from '../js/random.js';
 
@@ -143,4 +143,25 @@ test('PV do nível 1: dado + Constituição, mínimo 1; PV atual fica entre 0 e 
   assert.equal(currentHp({ hpCurrent: 3 }, 7), 3);
   assert.equal(currentHp({ hpCurrent: 12 }, 7), 7);
   assert.equal(currentHp({ hpCurrent: -2 }, 7), 0);
+});
+
+test('guardar separa uma unidade por vez, sem mudar os espaços', () => {
+  const c = newCharacter(['base']);
+  addItem(c, 'tocha', 3);
+  addItem(c, 'mochila', 1);
+  const before = slotsUsed(rules, c);
+  assert.ok(stowItem(c, 0));
+  assert.deepEqual(c.inventory.map((i) => [i.id, i.qty, !!i.stored]), [['tocha', 2, false], ['tocha', 1, true], ['mochila', 1, false]]);
+  assert.ok(stowItem(c, 0));
+  assert.equal(c.inventory[1].qty, 2);
+  assert.equal(stowItem(c, 1), false, 'item guardado não é guardado de novo');
+  addItem(c, 'tocha', 1);
+  assert.equal(c.inventory[0].qty, 2, 'novas unidades vão para a linha em uso');
+  assert.ok(stowItem(c, 1, true));
+  assert.equal(c.inventory[0].qty, 3);
+  // A primeira mochila continua grátis mesmo guardada.
+  const i = c.inventory.findIndex((x) => x.id === 'mochila');
+  stowItem(c, i);
+  addItem(c, 'mochila', 1);
+  assert.equal(slotsUsed(rules, c), before + 2, 'uma tocha a mais e a segunda mochila');
 });

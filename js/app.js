@@ -3,13 +3,13 @@ import { loadRules, DEFAULT_BOOKS, BOOKS } from './data/index.js';
 import {
   newCharacter, rollStats, rollDice, roll, getClass, findItem, itemOf, addItem, removeItem, buyQty, applyQuickPack, applyKit,
   splitMoney, coinsOf, COINS, xpNeeded, nextLevel, levelUpError, talentSlots, hpSteps, spellStatus, computeSheet, titleFor,
-  MAX_LEVEL, fmtMod, currentHp,
+  MAX_LEVEL, fmtMod, currentHp, stowItem,
 } from './rules.js';
 import * as R from './random.js';
 import { STEPS, visibleSteps, renderTalentSlot, renderSpellPicker, bookToggle } from './wizard.js';
 import { renderSheet, summaryLine } from './sheet.js';
 import * as store from './storage.js';
-import { esc, help, openHelp, closeSheet, toast, getAt, setAt, diceInput } from './ui.js';
+import { esc, help, openHelp, closeSheet, askConfirm, takeConfirm, toast, getAt, setAt, diceInput } from './ui.js';
 
 const app = document.getElementById('app');
 const rulesCache = new Map();
@@ -278,6 +278,11 @@ function applyBind(el) {
 const actions = {
   help: (el) => openHelp(el),
   closeSheet: () => closeSheet(),
+  confirmYes() {
+    const fn = takeConfirm();
+    closeSheet();
+    fn?.();
+  },
 
   newChar() {
     state.char = newCharacter(prefs.books || DEFAULT_BOOKS);
@@ -416,10 +421,12 @@ const actions = {
     go(`#/ficha/${c.id}`);
   },
   delete(el) {
-    const c = store.getCharacter(el.dataset.value);
-    if (!confirm(`Excluir ${c?.name || 'este personagem'}? Não dá para desfazer.`)) return;
-    store.deleteCharacter(el.dataset.value);
-    go('#/');
+    const id = el.dataset.value;
+    const c = store.getCharacter(id);
+    askConfirm({ title: 'Excluir personagem', text: `Excluir ${c?.name || 'este personagem'}? Não dá para desfazer.`, ok: 'Excluir' }, () => {
+      store.deleteCharacter(id);
+      go('#/');
+    });
   },
   print() { window.print(); },
   exportOne(el) {
@@ -491,16 +498,40 @@ const actions = {
   coinAdd(el) { changeCoins(el.dataset.value, 1); },
   coinSub(el) { changeCoins(el.dataset.value, -1); },
   invPlus(el) { editInventory(el, (c, inv) => { inv.qty += 1; }); },
-  invMinus(el) { editInventory(el, (c, inv) => { inv.qty -= 1; }); },
+  invMinus(el) {
+    const { inv, item } = invAt(el);
+    if (!inv) return;
+    const minus = () => editInventory(el, (c, row) => { row.qty -= 1; });
+    if (inv.qty > 1) minus();
+    else askConfirm({ title: 'Tirar item', text: `Esta é a última unidade de ${item.name}. Tirar da mochila?`, ok: 'Tirar' }, minus);
+  },
   invUse(el) {
-    editInventory(el, (c, inv, item) => {
-      inv.qty -= 1;
-      toast(inv.qty > 0 ? `${item.name}: restam ${inv.qty}.` : `${item.name}: acabou.`);
+    const { inv, item } = invAt(el);
+    if (!inv) return;
+    askConfirm({ title: 'Usar item', text: `Usar 1 ${item.name}? ${inv.qty > 1 ? `Vão sobrar ${inv.qty - 1}.` : 'Era o último.'}`, ok: 'Usar' }, () => {
+      editInventory(el, (c, row) => {
+        row.qty -= 1;
+        toast(row.qty > 0 ? `${item.name}: restam ${row.qty}.` : `${item.name}: acabou.`);
+      });
     });
   },
   invRemove(el) {
+    const { inv, item } = invAt(el);
+    if (!inv) return;
+    askConfirm({ title: 'Remover item', text: `Remover ${inv.qty > 1 ? `todas as ${inv.qty} unidades de ` : ''}${item.name}${inv.stored ? ' (guardado)' : ''} da mochila?`, ok: 'Remover' }, () => {
+      editInventory(el, (c, row) => { row.qty = 0; });
+    });
+  },
+  invStow(el) {
     editInventory(el, (c, inv, item) => {
-      if (confirm(`Tirar ${item.name} da mochila?`)) inv.qty = 0;
+      if (!stowItem(c, Number(el.dataset.value))) return false;
+      toast(`1 ${item.name} guardado.`);
+    });
+  },
+  invUnstow(el) {
+    editInventory(el, (c, inv, item) => {
+      if (!stowItem(c, Number(el.dataset.value), true)) return false;
+      toast(`1 ${item.name} de volta à mão.`);
     });
   },
   invAdd(el) {
@@ -561,7 +592,16 @@ function updateChar(id, fn) {
   if (!store.saveCharacter(c)) toast('Não foi possível salvar neste navegador.');
 }
 
-function editInventory(el, fn) {
+// Lê a linha do inventário sem mudar nada (para montar a confirmação).
+function invAt(el) {
+  const c = store.getCharacter(el.dataset.char);
+  const inv = c?.inventory[Number(el.dataset.value)];
+  return { inv, item: inv && itemOf(rulesFor(c.books || DEFAULT_BOOKS), inv) };
+}
+
+// Os dados do botão são copiados: depois da confirmação ele já pode ter saído da tela.
+function editInventory(btn, fn) {
+  const el = { dataset: { ...btn.dataset } };
   updateChar(el.dataset.char, (c, rules) => {
     const inv = c.inventory[Number(el.dataset.value)];
     if (!inv) return false;
