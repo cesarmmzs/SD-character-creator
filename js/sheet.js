@@ -82,7 +82,7 @@ function renderBackpack(rules, c, s, addOpen) {
       <div class="inv-name"><strong>${esc(item.name)}</strong>${item.cat === 'custom' ? ' <span class="badge">próprio</span>' : ''}${inv.stored ? ' <span class="badge badge-stored">guardado</span>' : ''}
         <input type="text" class="inv-note" data-inv-note="${i}" data-char="${esc(c.id)}" value="${esc(inv.note || '')}" placeholder="anotação" aria-label="Anotação sobre ${esc(item.name)}"></div>
       <span class="stepper"><button type="button" data-act="invMinus" data-value="${i}" data-char="${esc(c.id)}" aria-label="Menos ${esc(item.name)}">−</button><span>${inv.qty}</span><button type="button" data-act="invPlus" data-value="${i}" data-char="${esc(c.id)}" aria-label="Mais ${esc(item.name)}">+</button></span>
-      <span class="inv-slots small muted">${invSlots(item, inv)} esp.</span>
+      <span class="inv-slots small muted">${inv.stored ? 'na cidade' : `${invSlots(item, inv)} esp.`}</span>
       <span class="inv-acts">${usable ? `<button type="button" class="btn small" data-act="invUse" ${ref}>usar</button>` : ''}${stow}<button type="button" class="btn small ghost danger" data-act="invRemove" data-value="${i}" data-char="${esc(c.id)}" aria-label="Tirar ${esc(item.name)}">×</button></span>
     </li>`;
   }).join('');
@@ -136,7 +136,7 @@ export function renderSheet(rules, c, { compact = false, interactive = false, ad
 
   const inventory = c.inventory.map((inv) => {
     const item = itemOf(rules, inv);
-    return item ? `<li>${esc(item.name)}${inv.qty > 1 ? ` × ${inv.qty}` : ''}${inv.stored ? ' <span class="muted small">(guardado)</span>' : ''}${inv.note ? ` <span class="muted small">(${esc(inv.note)})</span>` : ''}</li>` : '';
+    return item ? `<li>${esc(item.name)}${inv.qty > 1 ? ` × ${inv.qty}` : ''}${inv.stored ? ' <span class="muted small">(guardado na cidade)</span>' : ''}${inv.note ? ` <span class="muted small">(${esc(inv.note)})</span>` : ''}</li>` : '';
   }).join('');
 
   const features = s.features.map((f) => `<li><strong>${esc(f.name)}</strong> <span class="muted small">(${esc(f.source)})</span>${compact ? '' : `<br><span class="small">${esc(f.desc)}</span>`}</li>`).join('');

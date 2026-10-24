@@ -145,13 +145,14 @@ test('PV do nível 1: dado + Constituição, mínimo 1; PV atual fica entre 0 e 
   assert.equal(currentHp({ hpCurrent: -2 }, 7), 0);
 });
 
-test('guardar separa uma unidade por vez, sem mudar os espaços', () => {
+test('guardar deixa uma unidade na cidade: sem espaço, ataque ou CA', () => {
   const c = newCharacter(['base']);
+  c.classId = 'guerreiro'; c.level = 1;
   addItem(c, 'tocha', 3);
-  addItem(c, 'mochila', 1);
   const before = slotsUsed(rules, c);
   assert.ok(stowItem(c, 0));
-  assert.deepEqual(c.inventory.map((i) => [i.id, i.qty, !!i.stored]), [['tocha', 2, false], ['tocha', 1, true], ['mochila', 1, false]]);
+  assert.deepEqual(c.inventory.map((i) => [i.id, i.qty, !!i.stored]), [['tocha', 2, false], ['tocha', 1, true]]);
+  assert.equal(slotsUsed(rules, c), before - 1);
   assert.ok(stowItem(c, 0));
   assert.equal(c.inventory[1].qty, 2);
   assert.equal(stowItem(c, 1), false, 'item guardado não é guardado de novo');
@@ -159,9 +160,17 @@ test('guardar separa uma unidade por vez, sem mudar os espaços', () => {
   assert.equal(c.inventory[0].qty, 2, 'novas unidades vão para a linha em uso');
   assert.ok(stowItem(c, 1, true));
   assert.equal(c.inventory[0].qty, 3);
-  // A primeira mochila continua grátis mesmo guardada.
-  const i = c.inventory.findIndex((x) => x.id === 'mochila');
-  stowItem(c, i);
-  addItem(c, 'mochila', 1);
-  assert.equal(slotsUsed(rules, c), before + 2, 'uma tocha a mais e a segunda mochila');
+  // Arma e armadura guardadas não contam.
+  const weapon = rules.weapons[0].id;
+  const armor = rules.armor.find((a) => !a.shield).id;
+  addItem(c, weapon, 1); addItem(c, armor, 1);
+  const armed = computeSheet(rules, c);
+  stowItem(c, c.inventory.findIndex((x) => x.id === weapon));
+  stowItem(c, c.inventory.findIndex((x) => x.id === armor && !x.stored));
+  const s = computeSheet(rules, c);
+  const wname = rules.weapons[0].name;
+  assert.ok(armed.attacks.some((a) => a.name === wname));
+  assert.ok(!s.attacks.some((a) => a.name === wname));
+  assert.ok(s.ac.ac <= armed.ac.ac);
+  assert.equal(s.ac.desc, 'Sem armadura');
 });
