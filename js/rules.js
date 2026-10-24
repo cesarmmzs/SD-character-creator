@@ -479,11 +479,11 @@ export function slotsUsed(rules, c) {
   const gear = new Map();
   for (const inv of c.inventory) {
     const item = itemOf(rules, inv);
-    if (!item) continue;
+    // Guardado fica na cidade: não ocupa espaço durante a expedição.
+    if (!item || inv.stored) continue;
     if (item.cat === 'custom') {
       used += item.slots * inv.qty;
     } else if (item.cat === 'gear') {
-      // Itens guardados ficam em linha própria; somamos tudo antes de dividir por espaço.
       const g = gear.get(item.id) || { item, qty: 0 };
       g.qty += inv.qty;
       gear.set(item.id, g);
@@ -552,7 +552,7 @@ export function computeAC(rules, c, mods, bonus) {
   let shield = null;
   for (const inv of c.inventory) {
     const item = findItem(rules, inv.id);
-    if (item?.cat !== 'armor' || !armorAllowed(rules, c, item)) continue;
+    if (inv.stored || item?.cat !== 'armor' || !armorAllowed(rules, c, item)) continue;
     if (item.shield) { if (!shield || item.shield > shield.shield) shield = item; continue; }
     const extra = bonus.acArmor.filter((a) => a === item.id || a === item.base).length;
     const ac = item.ac + (item.dex ? mods.DES : 0) + extra;
@@ -577,7 +577,7 @@ export function computeAttacks(rules, c, mods, bonus) {
   const seen = new Set();
   const out = [];
   for (const inv of c.inventory) {
-    const w = rules.weapons.find((x) => x.id === inv.id);
+    const w = !inv.stored && rules.weapons.find((x) => x.id === inv.id);
     if (!w || seen.has(w.id)) continue;
     seen.add(w.id);
     const m = mastery.filter((x) => x === w.id).length;
@@ -659,6 +659,7 @@ export function stowItem(c, index, back = false) {
   if (target) target.qty += 1;
   else c.inventory.splice(back ? index : index + 1, 0, { ...same, qty: 1, ...(back ? {} : { stored: true }), ...(note ? { note } : {}) });
   inv.qty -= 1;
+  if (inv.qty < 1) c.inventory.splice(c.inventory.indexOf(inv), 1);
   return true;
 }
 
